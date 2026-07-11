@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bot, Mic, Send, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,13 +25,23 @@ export interface ChatConversation {
 export function ChatPanel({
   conversation,
   messages,
+  onChanged,
 }: {
   conversation: ChatConversation;
   messages: ChatMessage[];
+  onChanged?: () => void | Promise<void>;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [draft, setDraft] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll pro final quando chega mensagem nova (ou troca de conversa).
+  const lastMessageId = messages[messages.length - 1]?.id;
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [lastMessageId]);
 
   const statusLine =
     conversation.status === "voce"
@@ -41,14 +51,20 @@ export function ChatPanel({
         : "IA respondendo";
 
   function assumir() {
-    start(() => assumirConversa(conversation.id));
+    start(async () => {
+      await assumirConversa(conversation.id);
+      await onChanged?.();
+    });
   }
   function enviar(e: React.FormEvent) {
     e.preventDefault();
     const text = draft.trim();
     if (!text) return;
     setDraft("");
-    start(() => sendReply(conversation.id, text));
+    start(async () => {
+      await sendReply(conversation.id, text);
+      await onChanged?.();
+    });
   }
 
   return (
@@ -89,7 +105,10 @@ export function ChatPanel({
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50">
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50"
+      >
         {messages.map((m) => {
           const mine = m.from === "bot" || m.from === "you";
           const isYou = m.from === "you";
