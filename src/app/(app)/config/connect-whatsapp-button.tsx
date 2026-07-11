@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCheck,
+  Info,
   Loader2,
   MessageCircle,
   Phone,
@@ -272,6 +273,12 @@ export function WhatsAppConnectionCard({
               );
             })}
           </ol>
+
+          <p className="flex items-start gap-1.5 mt-3 text-xs text-slate-400 justify-center md:justify-start">
+            <Info size={13} className="shrink-0 mt-0.5" />
+            O painel só mostra conversas a partir da conexão — a Meta não
+            permite importar o histórico de mensagens anterior.
+          </p>
         </div>
 
         <div className="flex flex-col items-center gap-2 shrink-0">
