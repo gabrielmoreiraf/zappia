@@ -17,7 +17,7 @@ export default async function ConfigPage() {
 
       <WhatsAppConnectionCard connected={connected} number={client.whatsappNumber} />
 
-      <div className="grid gap-4 lg:grid-cols-2 items-start">
+      <div className="grid gap-4 lg:grid-cols-2 items-stretch">
         <PlanCard />
 
         <NotificationsCard

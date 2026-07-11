@@ -13,7 +13,7 @@ const MOCK_NEXT_BILLING = "12 de agosto de 2026";
 
 export function PlanCard() {
   return (
-    <Card>
+    <Card className="h-full flex flex-col">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">Plano {PLAN_NAME}</CardTitle>
@@ -23,7 +23,7 @@ export function PlanCard() {
         </div>
         <p className="text-xs text-muted-foreground">Assinatura e pagamento.</p>
       </CardHeader>
-      <CardContent className="space-y-1">
+      <CardContent className="space-y-1 flex-1 flex flex-col">
         <div className="flex items-baseline gap-1 py-2.5 border-b border-slate-50">
           <span className="text-2xl font-semibold text-slate-800">
             {PLAN_PRICE_LABEL}
@@ -46,8 +46,7 @@ export function PlanCard() {
         </div>
 
         <Button
-          variant="outline"
-          className="mt-3 w-full"
+          className="mt-auto w-full"
           onClick={() => toast.info("Gerenciamento de assinatura chega em breve.")}
         >
           Gerenciar assinatura
