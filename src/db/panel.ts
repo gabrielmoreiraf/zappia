@@ -2,6 +2,7 @@ import { and, count, desc, eq, gte, inArray, lt } from "drizzle-orm";
 import { db } from "./index";
 import {
   conversations,
+  dismissedNotifications,
   leads,
   messages,
   usageLog,
@@ -206,12 +207,13 @@ export async function getNotifications(
     .orderBy(desc(leads.createdAt))
     .limit(10);
 
-  const items: NotificationItem[] = [
+  const built: NotificationItem[] = [
     ...convos.map((c) => {
       const name = c.contactName ?? "Contato";
       const isHandoff = c.status === "novo";
       return {
-        id: `c-${c.id}`,
+        // inclui o timestamp: nova mensagem = nova notificação (reaparece).
+        id: `c-${c.id}-${c.lastMessageAt.getTime()}`,
         type: (isHandoff ? "handoff" : "conversa") as "handoff" | "conversa",
         title: isHandoff ? `${name} precisa de você` : `Mensagem de ${name}`,
         sub: isHandoff
@@ -229,16 +231,20 @@ export async function getNotifications(
       href: "/leads",
       at: l.createdAt,
     })),
-  ]
-    .sort((a, b) => b.at.getTime() - a.at.getTime())
-    .slice(0, 12);
+  ].sort((a, b) => b.at.getTime() - a.at.getTime());
 
-  // Badge = conversas que precisam de você + leads novos ainda não vistos.
-  const count =
-    convos.filter((c) => c.status === "novo").length +
-    recentLeads.filter((l) => l.status === "novo").length;
+  // Remove as dispensadas.
+  const dismissed = new Set(
+    (
+      await db
+        .select({ k: dismissedNotifications.notifKey })
+        .from(dismissedNotifications)
+        .where(eq(dismissedNotifications.clientId, clientId))
+    ).map((r) => r.k),
+  );
+  const items = built.filter((n) => !dismissed.has(n.id)).slice(0, 12);
 
-  return { items, count };
+  return { items, count: items.length };
 }
 
 /* ---------- resumo diário (Fase 7 · e-mail) ---------- */

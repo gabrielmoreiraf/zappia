@@ -161,6 +161,23 @@ export const emailVerifications = pgTable("email_verifications", {
     .notNull(),
 });
 
+/* ---------- notificações dispensadas (sino do topo) ---------- */
+
+export const dismissedNotifications = pgTable(
+  "dismissed_notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => clients.id, { onDelete: "cascade" }),
+    notifKey: text("notif_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [unique("dismissed_notif_uq").on(t.clientId, t.notifKey)],
+);
+
 /* ---------- usage_log (§6) ---------- */
 
 export const usageLog = pgTable("usage_log", {

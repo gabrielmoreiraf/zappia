@@ -34,7 +34,6 @@ export default async function AppLayout({
         <Topbar
           hasClient={!!client}
           notifications={notifs.items}
-          count={notifs.count}
           userName={user.name ?? ""}
           userEmail={user.email}
           userImage={user.image}

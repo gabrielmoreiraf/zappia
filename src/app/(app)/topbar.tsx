@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -11,6 +12,7 @@ import {
   Search,
   Settings,
   Users,
+  X,
   Zap,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -25,6 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import type { NotificationItem } from "@/db/panel";
 import { timeShort } from "@/lib/format";
+import { clearNotifications, dismissNotification } from "./notification-actions";
 
 function initialsOf(name: string, email: string) {
   return (name || email).charAt(0).toUpperCase();
@@ -33,24 +36,33 @@ function initialsOf(name: string, email: string) {
 export function Topbar({
   hasClient,
   notifications,
-  count,
   userName,
   userEmail,
   userImage,
 }: {
   hasClient: boolean;
   notifications: NotificationItem[];
-  count: number;
   userName: string;
   userEmail: string;
   userImage?: string | null;
 }) {
   const router = useRouter();
+  const [items, setItems] = useState(notifications);
+  useEffect(() => setItems(notifications), [notifications]);
 
   function onSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const q = new FormData(e.currentTarget).get("q");
     router.push(`/conversas?q=${encodeURIComponent(String(q ?? "").trim())}`);
+  }
+
+  function dismiss(key: string) {
+    setItems((prev) => prev.filter((n) => n.id !== key));
+    void dismissNotification(key);
+  }
+  function clearAll() {
+    void clearNotifications(items.map((n) => n.id));
+    setItems([]);
   }
 
   return (
@@ -85,60 +97,76 @@ export function Topbar({
                 aria-label="Notificações"
               >
                 <Bell size={18} />
-                {count > 0 && (
+                {items.length > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
-                    {count}
+                    {items.length}
                   </span>
                 )}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80 p-0">
-              <div className="px-3 py-2.5 border-b border-slate-100">
+              <div className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between">
                 <span className="text-sm font-semibold text-slate-800">
                   Notificações
                 </span>
+                {items.length > 0 && (
+                  <button
+                    onClick={clearAll}
+                    className="text-xs font-medium text-emerald-600 hover:text-emerald-700"
+                  >
+                    Limpar todos
+                  </button>
+                )}
               </div>
-              {notifications.length === 0 ? (
+              {items.length === 0 ? (
                 <p className="px-3 py-6 text-sm text-slate-400 text-center">
                   Nada novo por aqui.
                 </p>
               ) : (
                 <div className="max-h-96 overflow-y-auto">
-                  {notifications.map((n) => (
-                    <Link
+                  {items.map((n) => (
+                    <div
                       key={n.id}
-                      href={n.href}
-                      className="flex gap-2.5 px-3 py-2.5 hover:bg-slate-50 border-b border-slate-50 last:border-0"
+                      className="group flex items-center gap-1 pr-2 hover:bg-slate-50 border-b border-slate-50 last:border-0"
                     >
-                      <span
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                          n.type === "handoff"
-                            ? "bg-amber-50 text-amber-600"
-                            : n.type === "lead"
-                              ? "bg-emerald-50 text-emerald-600"
-                              : "bg-sky-50 text-sky-600"
-                        }`}
+                      <Link href={n.href} className="flex gap-2.5 px-3 py-2.5 flex-1 min-w-0">
+                        <span
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                            n.type === "handoff"
+                              ? "bg-amber-50 text-amber-600"
+                              : n.type === "lead"
+                                ? "bg-emerald-50 text-emerald-600"
+                                : "bg-sky-50 text-sky-600"
+                          }`}
+                        >
+                          {n.type === "handoff" ? (
+                            <Zap size={15} />
+                          ) : n.type === "lead" ? (
+                            <Users size={15} />
+                          ) : (
+                            <MessageSquare size={15} />
+                          )}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium text-slate-800 truncate">
+                            {n.title}
+                          </span>
+                          <span className="block text-xs text-slate-400 truncate">
+                            {n.sub}
+                          </span>
+                        </span>
+                        <span className="text-[11px] text-slate-400 shrink-0">
+                          {timeShort(new Date(n.at))}
+                        </span>
+                      </Link>
+                      <button
+                        onClick={() => dismiss(n.id)}
+                        aria-label="Dispensar"
+                        className="w-6 h-6 rounded-md flex items-center justify-center text-slate-300 hover:text-slate-600 hover:bg-slate-100 shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100"
                       >
-                        {n.type === "handoff" ? (
-                          <Zap size={15} />
-                        ) : n.type === "lead" ? (
-                          <Users size={15} />
-                        ) : (
-                          <MessageSquare size={15} />
-                        )}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium text-slate-800 truncate">
-                          {n.title}
-                        </span>
-                        <span className="block text-xs text-slate-400 truncate">
-                          {n.sub}
-                        </span>
-                      </span>
-                      <span className="text-[11px] text-slate-400 shrink-0">
-                        {timeShort(new Date(n.at))}
-                      </span>
-                    </Link>
+                        <X size={14} />
+                      </button>
+                    </div>
                   ))}
                 </div>
               )}
