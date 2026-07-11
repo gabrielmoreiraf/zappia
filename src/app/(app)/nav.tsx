@@ -71,11 +71,11 @@ function Logo() {
 }
 
 export function Sidebar({
-  clientName,
-  plan,
+  userName,
+  userEmail,
 }: {
-  clientName: string;
-  plan: string;
+  userName: string;
+  userEmail: string;
 }) {
   const pathname = usePathname();
   return (
@@ -111,13 +111,13 @@ export function Sidebar({
       </nav>
       <div className="mt-3 flex items-center gap-2.5 p-2.5 rounded-xl bg-slate-50">
         <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">
-          {clientName.charAt(0)}
+          {(userName || userEmail).charAt(0).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1">
           <div className="text-sm font-semibold text-slate-800 truncate">
-            {clientName}
+            {userName || "Minha conta"}
           </div>
-          <div className="text-xs text-slate-400">Plano {plan}</div>
+          <div className="text-xs text-slate-400 truncate">{userEmail}</div>
         </div>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}

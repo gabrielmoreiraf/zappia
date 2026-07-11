@@ -1,7 +1,6 @@
 import { Bell, Search } from "lucide-react";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { getCurrentClient } from "@/lib/current-client";
 import { MobileNav, Sidebar } from "./nav";
 
 // O painel reflete dados ao vivo do banco — nada de HTML estático em cache.
@@ -15,11 +14,12 @@ export default async function AppLayout({
   const session = await auth();
   if (!session) redirect("/login");
 
-  const client = await getCurrentClient();
-
   return (
     <div className="flex min-h-screen bg-slate-100">
-      <Sidebar clientName={client.name} plan={client.plan === "pro" ? "Pro" : "Start"} />
+      <Sidebar
+        userName={session.user?.name ?? ""}
+        userEmail={session.user?.email ?? ""}
+      />
 
       <div className="flex-1 min-w-0 flex flex-col">
         {/* topbar mobile */}

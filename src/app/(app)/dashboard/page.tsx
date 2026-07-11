@@ -1,20 +1,25 @@
 import { Clock, MessageSquare, Sparkles, TrendingUp, Users, Zap } from "lucide-react";
+import { auth } from "@/auth";
 import { getCurrentClient } from "@/lib/current-client";
 import { getDashboard } from "@/db/panel";
 import { initials, tempoResposta } from "@/lib/format";
 import { Header, Metric } from "../ui";
 
 export default async function DashboardPage() {
+  const session = await auth();
   const client = await getCurrentClient();
   const d = await getDashboard(client.id);
-  const firstName = client.name.split(/[ —-]/)[0];
+  const userFirst =
+    session?.user?.name?.split(" ")[0] ||
+    session?.user?.email?.split("@")[0] ||
+    "";
   const maxV = Math.max(1, ...d.week.map((w) => w.v));
 
   return (
     <div>
       <Header
-        title={`Olá, ${firstName} 👋`}
-        sub="Aqui está o resumo do seu atendimento hoje."
+        title={userFirst ? `Olá, ${userFirst} 👋` : "Olá 👋"}
+        sub={`Resumo de ${client.name} · hoje.`}
       />
 
       <div className="grid gap-3 mb-6 grid-cols-2 lg:grid-cols-4">
