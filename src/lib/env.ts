@@ -34,4 +34,11 @@ export const env = {
   get whatsappAppSecret() {
     return required("WHATSAPP_APP_SECRET");
   },
+  get resendApiKey() {
+    return required("RESEND_API_KEY");
+  },
+  get emailFrom() {
+    // Sem domínio verificado ainda → remetente de teste do Resend.
+    return process.env.EMAIL_FROM || "Zappia <onboarding@resend.dev>";
+  },
 };

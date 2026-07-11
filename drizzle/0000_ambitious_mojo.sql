@@ -1,4 +1,3 @@
-CREATE TYPE "public"."agency_role" AS ENUM('owner', 'member');--> statement-breakpoint
 CREATE TYPE "public"."client_status" AS ENUM('active', 'paused');--> statement-breakpoint
 CREATE TYPE "public"."confidence" AS ENUM('alta', 'baixa');--> statement-breakpoint
 CREATE TYPE "public"."conversation_status" AS ENUM('ia', 'novo', 'voce');--> statement-breakpoint
@@ -6,15 +5,7 @@ CREATE TYPE "public"."lead_channel" AS ENUM('anuncio', 'organico');--> statement
 CREATE TYPE "public"."lead_status" AS ENUM('novo', 'contato', 'matriculado');--> statement-breakpoint
 CREATE TYPE "public"."message_from" AS ENUM('them', 'bot', 'you');--> statement-breakpoint
 CREATE TYPE "public"."plan" AS ENUM('start', 'pro');--> statement-breakpoint
-CREATE TABLE "agency_users" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"email" text NOT NULL,
-	"password_hash" text NOT NULL,
-	"role" "agency_role" DEFAULT 'member' NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "agency_users_email_unique" UNIQUE("email")
-);
---> statement-breakpoint
+CREATE TYPE "public"."user_role" AS ENUM('owner', 'member');--> statement-breakpoint
 CREATE TABLE "clients" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
@@ -43,6 +34,16 @@ CREATE TABLE "conversations" (
 	"last_message_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"unread_count" integer DEFAULT 0 NOT NULL,
 	CONSTRAINT "conversations_client_contact_uq" UNIQUE("client_id","contact_phone")
+);
+--> statement-breakpoint
+CREATE TABLE "email_verifications" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"email" text NOT NULL,
+	"code_hash" text NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"attempts" integer DEFAULT 0 NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "email_verifications_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
 CREATE TABLE "leads" (
@@ -77,6 +78,17 @@ CREATE TABLE "usage_log" (
 	"audio_seconds" integer DEFAULT 0 NOT NULL,
 	"whatsapp_messages" integer DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "users" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"email" text NOT NULL,
+	"name" text,
+	"password_hash" text NOT NULL,
+	"role" "user_role" DEFAULT 'member' NOT NULL,
+	"email_verified_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "users_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
 ALTER TABLE "conversations" ADD CONSTRAINT "conversations_client_id_clients_id_fk" FOREIGN KEY ("client_id") REFERENCES "public"."clients"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

@@ -86,14 +86,17 @@ async function main() {
   await db.delete(s.messages);
   await db.delete(s.usageLog);
   await db.delete(s.conversations);
-  await db.delete(s.agencyUsers);
+  await db.delete(s.emailVerifications);
+  await db.delete(s.users);
   await db.delete(s.clients);
 
-  console.log("→ agency_users…");
-  await db.insert(s.agencyUsers).values({
+  console.log("→ users (admin do sistema)…");
+  await db.insert(s.users).values({
     email: "owner@zappia.app",
-    passwordHash: bcrypt.hashSync("zappia123", 10),
+    name: "Owner Zappia",
+    passwordHash: bcrypt.hashSync("Zappia@123", 10),
     role: "owner",
+    emailVerifiedAt: new Date(),
   });
 
   console.log("→ clients…");
@@ -366,7 +369,7 @@ async function main() {
   );
 
   console.log("\n✓ Seed concluído.");
-  console.log("  Agência (login): owner@zappia.app / zappia123");
+  console.log("  Admin (login): owner@zappia.app / Zappia@123");
   console.log("  Client de teste: Daniel — Cursos (7 cursos, 4 conversas, 5 leads)");
 }
 

@@ -1,4 +1,6 @@
 import { Bell, Search } from "lucide-react";
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { getCurrentClient } from "@/lib/current-client";
 import { MobileNav, Sidebar } from "./nav";
 
@@ -10,6 +12,9 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const session = await auth();
+  if (!session) redirect("/login");
+
   const client = await getCurrentClient();
 
   return (

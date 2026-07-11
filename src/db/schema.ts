@@ -34,7 +34,7 @@ export const leadStatusEnum = pgEnum("lead_status", [
   "contato",
   "matriculado",
 ]);
-export const agencyRoleEnum = pgEnum("agency_role", ["owner", "member"]);
+export const userRoleEnum = pgEnum("user_role", ["owner", "member"]);
 
 /* ---------- clients ---------- */
 
@@ -119,13 +119,29 @@ export const leads = pgTable("leads", {
     .notNull(),
 });
 
-/* ---------- agency_users ---------- */
+/* ---------- users (login do sistema / admin) ---------- */
 
-export const agencyUsers = pgTable("agency_users", {
+export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
+  name: text("name"),
   passwordHash: text("password_hash").notNull(),
-  role: agencyRoleEnum("role").default("member").notNull(),
+  role: userRoleEnum("role").default("member").notNull(),
+  // null enquanto não confirmou o código de 6 dígitos.
+  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+/* ---------- verificação de e-mail (código de 6 dígitos, Resend) ---------- */
+
+export const emailVerifications = pgTable("email_verifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: text("email").notNull().unique(),
+  codeHash: text("code_hash").notNull(), // bcrypt do código
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  attempts: integer("attempts").default(0).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -199,7 +215,8 @@ export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
 export type Lead = typeof leads.$inferSelect;
 export type NewLead = typeof leads.$inferInsert;
-export type AgencyUser = typeof agencyUsers.$inferSelect;
-export type NewAgencyUser = typeof agencyUsers.$inferInsert;
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+export type EmailVerification = typeof emailVerifications.$inferSelect;
 export type UsageLog = typeof usageLog.$inferSelect;
 export type NewUsageLog = typeof usageLog.$inferInsert;
