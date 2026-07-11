@@ -46,7 +46,7 @@ export function AjustesForm({
   }
 
   return (
-    <Card className="max-w-xl">
+    <Card>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid gap-2">

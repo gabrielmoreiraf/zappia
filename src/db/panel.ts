@@ -158,6 +158,63 @@ export async function getDashboard(clientId: string): Promise<DashboardData> {
   };
 }
 
+/* ---------- notificações (sino do topo) ---------- */
+
+export interface NotificationItem {
+  id: string;
+  type: "handoff" | "lead";
+  title: string;
+  sub: string;
+  href: string;
+  at: Date;
+}
+
+export async function getNotifications(
+  clientId: string,
+): Promise<{ items: NotificationItem[]; count: number }> {
+  const handoffs = await db
+    .select()
+    .from(conversations)
+    .where(
+      and(
+        eq(conversations.clientId, clientId),
+        eq(conversations.status, "novo"),
+      ),
+    )
+    .orderBy(desc(conversations.lastMessageAt))
+    .limit(8);
+
+  const recentLeads = await db
+    .select()
+    .from(leads)
+    .where(eq(leads.clientId, clientId))
+    .orderBy(desc(leads.createdAt))
+    .limit(8);
+
+  const items: NotificationItem[] = [
+    ...handoffs.map((c) => ({
+      id: `h-${c.id}`,
+      type: "handoff" as const,
+      title: `${c.contactName ?? "Contato"} precisa de você`,
+      sub: "Conversa encaminhada pela IA",
+      href: `/conversas?c=${c.id}`,
+      at: c.lastMessageAt,
+    })),
+    ...recentLeads.map((l) => ({
+      id: `l-${l.id}`,
+      type: "lead" as const,
+      title: `Novo lead: ${l.contactName ?? "Contato"}`,
+      sub: l.courseInterest ?? "Interesse identificado",
+      href: "/leads",
+      at: l.createdAt,
+    })),
+  ]
+    .sort((a, b) => b.at.getTime() - a.at.getTime())
+    .slice(0, 10);
+
+  return { items, count: handoffs.length };
+}
+
 /* ---------- resumo diário (Fase 7 · e-mail) ---------- */
 
 export interface DailySummary {

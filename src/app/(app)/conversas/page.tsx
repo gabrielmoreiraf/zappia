@@ -12,12 +12,16 @@ import { ChatPanel } from "./chat-panel";
 export default async function ConversasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ c?: string }>;
+  searchParams: Promise<{ c?: string; q?: string }>;
 }) {
-  const { c: selectedId } = await searchParams;
+  const { c: selectedId, q } = await searchParams;
   const client = await getCurrentClient();
   if (!client) redirect("/clientes");
-  const convos = await getConversationsList(client.id);
+  const all = await getConversationsList(client.id);
+  const term = (q ?? "").trim().toLowerCase();
+  const convos = term
+    ? all.filter((c) => (c.contactName ?? "").toLowerCase().includes(term))
+    : all;
   const thread = selectedId
     ? await getConversationThread(client.id, selectedId)
     : null;
@@ -28,19 +32,25 @@ export default async function ConversasPage({
         thread ? "hidden md:block" : "block"
       }`}
     >
-      <div className="p-3 border-b border-slate-100 flex items-center gap-2">
+      <form action="/conversas" className="p-3 border-b border-slate-100">
         <div className="relative flex-1">
           <Search
             size={15}
             className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
           />
-          <Input placeholder="Buscar conversa" className="pl-9 h-9" />
+          <Input
+            name="q"
+            defaultValue={q ?? ""}
+            placeholder="Buscar conversa"
+            className="pl-9 h-9"
+          />
         </div>
-      </div>
+      </form>
       {convos.length === 0 ? (
         <p className="p-4 text-sm text-slate-500">
-          Nenhuma conversa ainda. Elas aparecem aqui automaticamente quando alguém
-          chama seu WhatsApp.
+          {term
+            ? "Nenhuma conversa encontrada."
+            : "Nenhuma conversa ainda. Elas aparecem aqui automaticamente quando alguém chama seu WhatsApp."}
         </p>
       ) : (
         convos.map((c) => {

@@ -1,9 +1,10 @@
-import { Bell, Search } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/current-user";
 import { getCurrentClient } from "@/lib/current-client";
+import { getNotifications } from "@/db/panel";
 import { isAdminEmail } from "@/lib/roles";
 import { MobileNav, Sidebar } from "./nav";
+import { Topbar } from "./topbar";
 
 // O painel reflete dados ao vivo do banco — nada de HTML estático em cache.
 export const dynamic = "force-dynamic";
@@ -21,6 +22,10 @@ export default async function AppLayout({
   // Cliente sem negócio ainda → onboarding.
   if (!isAdmin && !client) redirect("/bem-vindo");
 
+  const notifs = client
+    ? await getNotifications(client.id)
+    : { items: [], count: 0 };
+
   return (
     <div className="flex min-h-screen bg-slate-100">
       <Sidebar
@@ -32,22 +37,14 @@ export default async function AppLayout({
       />
 
       <div className="flex-1 min-w-0 flex flex-col">
-        {/* topbar mobile */}
-        <div className="md:hidden bg-white px-4 pt-3 pb-2 border-b border-slate-100 flex items-center justify-between sticky top-0 z-10">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center">
-              <span className="text-white text-xs font-bold">Z</span>
-            </div>
-            <span className="font-bold text-slate-900">Zappia</span>
-          </div>
-          <div className="flex items-center gap-3 text-slate-400">
-            <Search size={18} />
-            <Bell size={18} />
-          </div>
-        </div>
+        <Topbar
+          hasClient={!!client}
+          notifications={notifs.items}
+          count={notifs.count}
+        />
 
         <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-6">
-          <div className="mx-auto w-full max-w-5xl">{children}</div>
+          <div className="mx-auto w-full max-w-4xl">{children}</div>
         </main>
       </div>
 

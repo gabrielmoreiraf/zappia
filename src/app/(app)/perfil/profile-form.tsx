@@ -125,7 +125,7 @@ export function ProfileForm({
   }
 
   return (
-    <div className="max-w-xl space-y-4">
+    <div className="space-y-4">
       {/* Foto + dados */}
       <Card>
         <CardHeader>
