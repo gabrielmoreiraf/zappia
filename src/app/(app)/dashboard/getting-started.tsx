@@ -14,9 +14,11 @@ interface Step {
 export function GettingStarted({
   whatsappConnected,
   hasKnowledge,
+  aiConfigured,
 }: {
   whatsappConnected: boolean;
   hasKnowledge: boolean;
+  aiConfigured: boolean;
 }) {
   const steps: Step[] = [
     {
@@ -41,7 +43,7 @@ export function GettingStarted({
       desc: "Defina o nome do assistente, o tom da conversa e quando ela deve te chamar.",
       href: "/ajustes",
       cta: "Ajustar",
-      done: false,
+      done: aiConfigured,
     },
   ];
 

@@ -51,6 +51,8 @@ export const clients = pgTable("clients", {
   tone: text("tone").default("Amigável").notNull(),
   welcomeMessage: text("welcome_message"),
   handoffTriggers: text("handoff_triggers").array().default([]).notNull(),
+  // true assim que o cliente salvar os Ajustes da IA ao menos uma vez (tutorial).
+  aiConfigured: boolean("ai_configured").default(false).notNull(),
   // Markdown estruturado (§3 do prompt mestre), injetado no prompt com caching.
   knowledgeBase: text("knowledge_base"),
   plan: planEnum("plan").default("start").notNull(),

@@ -103,10 +103,17 @@ export async function saveAjustes(formData: FormData) {
 
   await db
     .update(clients)
-    .set({ assistantName, welcomeMessage, tone, handoffTriggers })
+    .set({
+      assistantName,
+      welcomeMessage,
+      tone,
+      handoffTriggers,
+      aiConfigured: true,
+    })
     .where(eq(clients.id, client.id));
 
   revalidatePath("/ajustes");
+  revalidatePath("/dashboard");
 }
 
 /* ---------- Configurações · notificações (§4.8 / Fase 7) ---------- */

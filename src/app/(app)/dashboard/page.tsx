@@ -17,7 +17,7 @@ export default async function DashboardPage() {
   const whatsappConnected =
     !!client.whatsappPhoneId && !client.whatsappPhoneId.startsWith("PENDENTE");
   const hasKnowledge = parseKnowledgeBase(client.knowledgeBase).length > 0;
-  const setupDone = whatsappConnected && hasKnowledge;
+  const setupDone = whatsappConnected && hasKnowledge && client.aiConfigured;
   const userFirst =
     session?.user?.name?.split(" ")[0] ||
     session?.user?.email?.split("@")[0] ||
@@ -35,6 +35,7 @@ export default async function DashboardPage() {
         <GettingStarted
           whatsappConnected={whatsappConnected}
           hasKnowledge={hasKnowledge}
+          aiConfigured={client.aiConfigured}
         />
       )}
 
