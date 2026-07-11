@@ -162,7 +162,7 @@ export async function getDashboard(clientId: string): Promise<DashboardData> {
 
 export interface NotificationItem {
   id: string;
-  type: "handoff" | "lead";
+  type: "handoff" | "lead" | "conversa";
   title: string;
   sub: string;
   href: string;
@@ -172,34 +172,55 @@ export interface NotificationItem {
 export async function getNotifications(
   clientId: string,
 ): Promise<{ items: NotificationItem[]; count: number }> {
-  const handoffs = await db
+  // Conversas recentes (com preview da última mensagem).
+  const convos = await db
     .select()
     .from(conversations)
-    .where(
-      and(
-        eq(conversations.clientId, clientId),
-        eq(conversations.status, "novo"),
-      ),
-    )
+    .where(eq(conversations.clientId, clientId))
     .orderBy(desc(conversations.lastMessageAt))
-    .limit(8);
+    .limit(10);
+
+  const lastByConv = new Map<string, string>();
+  const ids = convos.map((c) => c.id);
+  if (ids.length) {
+    const msgs = await db
+      .select({
+        conversationId: messages.conversationId,
+        text: messages.text,
+        from: messages.from,
+      })
+      .from(messages)
+      .where(inArray(messages.conversationId, ids))
+      .orderBy(desc(messages.createdAt));
+    for (const m of msgs) {
+      if (!lastByConv.has(m.conversationId)) {
+        lastByConv.set(m.conversationId, `${m.from === "them" ? "" : "Você: "}${m.text}`);
+      }
+    }
+  }
 
   const recentLeads = await db
     .select()
     .from(leads)
     .where(eq(leads.clientId, clientId))
     .orderBy(desc(leads.createdAt))
-    .limit(8);
+    .limit(10);
 
   const items: NotificationItem[] = [
-    ...handoffs.map((c) => ({
-      id: `h-${c.id}`,
-      type: "handoff" as const,
-      title: `${c.contactName ?? "Contato"} precisa de você`,
-      sub: "Conversa encaminhada pela IA",
-      href: `/conversas?c=${c.id}`,
-      at: c.lastMessageAt,
-    })),
+    ...convos.map((c) => {
+      const name = c.contactName ?? "Contato";
+      const isHandoff = c.status === "novo";
+      return {
+        id: `c-${c.id}`,
+        type: (isHandoff ? "handoff" : "conversa") as "handoff" | "conversa",
+        title: isHandoff ? `${name} precisa de você` : `Mensagem de ${name}`,
+        sub: isHandoff
+          ? "Conversa encaminhada pela IA"
+          : (lastByConv.get(c.id) ?? "Conversa no WhatsApp"),
+        href: `/conversas?c=${c.id}`,
+        at: c.lastMessageAt,
+      };
+    }),
     ...recentLeads.map((l) => ({
       id: `l-${l.id}`,
       type: "lead" as const,
@@ -210,9 +231,14 @@ export async function getNotifications(
     })),
   ]
     .sort((a, b) => b.at.getTime() - a.at.getTime())
-    .slice(0, 10);
+    .slice(0, 12);
 
-  return { items, count: handoffs.length };
+  // Badge = conversas que precisam de você + leads novos ainda não vistos.
+  const count =
+    convos.filter((c) => c.status === "novo").length +
+    recentLeads.filter((l) => l.status === "novo").length;
+
+  return { items, count };
 }
 
 /* ---------- resumo diário (Fase 7 · e-mail) ---------- */

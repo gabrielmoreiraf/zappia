@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, Bot, Search, Users, Zap } from "lucide-react";
+import { Bell, Bot, MessageSquare, Search, Users, Zap } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,7 +41,7 @@ export function Topbar({
 
       {hasClient ? (
         <>
-          <form onSubmit={onSearch} className="flex-1 max-w-md relative">
+          <form onSubmit={onSearch} className="w-full max-w-xs min-w-0 relative">
             <Search
               size={15}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -53,7 +53,7 @@ export function Topbar({
             />
           </form>
 
-          <div className="ml-auto md:ml-0">
+          <div className="ml-auto">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -90,13 +90,17 @@ export function Topbar({
                           className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
                             n.type === "handoff"
                               ? "bg-amber-50 text-amber-600"
-                              : "bg-emerald-50 text-emerald-600"
+                              : n.type === "lead"
+                                ? "bg-emerald-50 text-emerald-600"
+                                : "bg-sky-50 text-sky-600"
                           }`}
                         >
                           {n.type === "handoff" ? (
                             <Zap size={15} />
-                          ) : (
+                          ) : n.type === "lead" ? (
                             <Users size={15} />
+                          ) : (
+                            <MessageSquare size={15} />
                           )}
                         </span>
                         <span className="min-w-0 flex-1">
