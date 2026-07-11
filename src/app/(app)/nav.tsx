@@ -20,13 +20,26 @@ import { exitClient } from "./agency-actions";
 
 type Item = { href: string; label: string; icon: LucideIcon };
 
-const CLIENT_ITEMS: Item[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/conversas", label: "Conversas", icon: MessageSquare },
-  { href: "/leads", label: "Leads", icon: Users },
-  { href: "/conhecimento", label: "Base de conhecimento", icon: BookOpen },
-  { href: "/ajustes", label: "Ajustes da IA", icon: SlidersHorizontal },
-  { href: "/config", label: "Configurações", icon: Settings },
+const CLIENT_SECTIONS: { label: string; items: Item[] }[] = [
+  {
+    label: "Operação",
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/conversas", label: "Conversas", icon: MessageSquare },
+      { href: "/leads", label: "Leads", icon: Users },
+    ],
+  },
+  {
+    label: "IA",
+    items: [
+      { href: "/conhecimento", label: "Base de conhecimento", icon: BookOpen },
+      { href: "/ajustes", label: "Ajustes da IA", icon: SlidersHorizontal },
+    ],
+  },
+  {
+    label: "Conta",
+    items: [{ href: "/config", label: "Configurações", icon: Settings }],
+  },
 ];
 
 const AGENCY_ITEMS: Item[] = [
@@ -101,9 +114,18 @@ export function Sidebar({
                 </form>
               )}
             </div>
-            {CLIENT_ITEMS.map((it) => (
-              <NavLink key={it.href} item={it} pathname={pathname} />
-            ))}
+            <div className="space-y-4">
+              {CLIENT_SECTIONS.map((sec) => (
+                <div key={sec.label}>
+                  <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide px-2 mb-1">
+                    {sec.label}
+                  </div>
+                  {sec.items.map((it) => (
+                    <NavLink key={it.href} item={it} pathname={pathname} />
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

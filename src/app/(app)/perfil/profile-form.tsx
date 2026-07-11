@@ -2,11 +2,17 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Check, X } from "lucide-react";
+import { Camera, Check, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/password-input";
@@ -66,6 +72,17 @@ export function ProfileForm({
   const [pending, start] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // dados da conta — bloqueados até clicar no lápis
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(user.name);
+  const [email, setEmail] = useState(user.email);
+
+  function cancelEdit() {
+    setName(user.name);
+    setEmail(user.email);
+    setEditing(false);
+  }
+
   // senha
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -104,6 +121,7 @@ export function ProfileForm({
       const res = await updateProfile(fd);
       if (res.ok) {
         toast.success("Perfil salvo!");
+        setEditing(false);
         router.refresh();
       } else {
         toast.error(res.error ?? "Não foi possível salvar.");
@@ -134,6 +152,19 @@ export function ProfileForm({
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Dados da conta</CardTitle>
+          {!editing && (
+            <CardAction>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setEditing(true)}
+                aria-label="Editar dados da conta"
+              >
+                <Pencil size={15} />
+              </Button>
+            </CardAction>
+          )}
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4 mb-5">
@@ -169,7 +200,14 @@ export function ProfileForm({
           <form onSubmit={saveInfo} className="space-y-4">
             <div className="grid gap-2">
               <Label htmlFor="name">Nome</Label>
-              <Input id="name" name="name" defaultValue={user.name} required />
+              <Input
+                id="name"
+                name="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={!editing}
+                required
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="email">E-mail</Label>
@@ -177,7 +215,9 @@ export function ProfileForm({
                 id="email"
                 name="email"
                 type="email"
-                defaultValue={user.email}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={!editing}
                 required
               />
             </div>
@@ -196,9 +236,21 @@ export function ProfileForm({
                 futura.
               </p>
             </div>
-            <Button type="submit" disabled={pending}>
-              Salvar alterações
-            </Button>
+            {editing && (
+              <div className="flex items-center gap-2">
+                <Button type="submit" disabled={pending}>
+                  Salvar alterações
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={pending}
+                  onClick={cancelEdit}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            )}
           </form>
         </CardContent>
       </Card>
