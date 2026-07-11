@@ -1,15 +1,28 @@
+import { cookies } from "next/headers";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { clients, type Client } from "@/db/schema";
 
+export const ACTIVE_CLIENT_COOKIE = "active_client";
+
 /**
- * Cliente "logado" do painel.
+ * Cliente "ativo" do painel.
  *
- * Fase 4 (dev): fixo no Daniel (o client semeado). A Fase 5 (Auth.js) troca
- * isto pela sessão real — e o painel da agência (Fase 6) vai poder "entrar como"
- * qualquer client.
+ * A agência escolhe qual client está vendo (cookie `active_client`, setado ao
+ * "Entrar" na tela de Clientes §4.9). Sem seleção, cai no Daniel (ou no primeiro).
  */
 export async function getCurrentClient(): Promise<Client> {
+  const jar = await cookies();
+  const activeId = jar.get(ACTIVE_CLIENT_COOKIE)?.value;
+  if (activeId) {
+    const [c] = await db
+      .select()
+      .from(clients)
+      .where(eq(clients.id, activeId))
+      .limit(1);
+    if (c) return c;
+  }
+
   const [daniel] = await db
     .select()
     .from(clients)

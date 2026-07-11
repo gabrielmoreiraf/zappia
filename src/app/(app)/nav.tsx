@@ -12,6 +12,8 @@ import {
   Settings,
   Bot,
   LogOut,
+  Building2,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -35,6 +37,13 @@ const SIDEBAR: { g: string; items: { href: string; label: string; icon: LucideIc
     {
       g: "Conta",
       items: [{ href: "/config", label: "Configurações", icon: Settings }],
+    },
+    {
+      g: "Agência",
+      items: [
+        { href: "/clientes", label: "Clientes", icon: Building2 },
+        { href: "/faturamento", label: "Faturamento", icon: Wallet },
+      ],
     },
   ];
 
