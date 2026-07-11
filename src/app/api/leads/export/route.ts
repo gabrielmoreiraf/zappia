@@ -10,6 +10,9 @@ function csvCell(v: string | null | undefined): string {
 
 export async function GET() {
   const client = await getCurrentClient();
+  if (!client) {
+    return new Response("Nenhum cliente ativo", { status: 400 });
+  }
   const rows = await getLeads(client.id);
 
   const header = ["Nome", "Curso de interesse", "Canal", "Status", "Data"];

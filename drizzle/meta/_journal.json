@@ -15,6 +15,13 @@
       "when": 1783738825841,
       "tag": "0001_vengeful_zarda",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783740335553,
+      "tag": "0002_lean_slyde",
+      "breakpoints": true
     }
   ]
 }

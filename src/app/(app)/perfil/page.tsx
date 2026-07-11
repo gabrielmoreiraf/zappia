@@ -1,0 +1,23 @@
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/current-user";
+import { Header } from "../ui";
+import { ProfileForm } from "./profile-form";
+
+export default async function PerfilPage() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  return (
+    <div>
+      <Header title="Meu perfil" sub="Seus dados, foto, senha e plano da conta." />
+      <ProfileForm
+        user={{
+          name: user.name ?? "",
+          email: user.email,
+          plan: user.plan,
+          image: user.image,
+        }}
+      />
+    </div>
+  );
+}

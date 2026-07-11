@@ -4,10 +4,12 @@ import { getCurrentClient } from "@/lib/current-client";
 import { getDashboard } from "@/db/panel";
 import { initials, tempoResposta } from "@/lib/format";
 import { Header, Metric } from "../ui";
+import { NoClient } from "../no-client";
 
 export default async function DashboardPage() {
   const session = await auth();
   const client = await getCurrentClient();
+  if (!client) return <NoClient />;
   const d = await getDashboard(client.id);
   const userFirst =
     session?.user?.name?.split(" ")[0] ||

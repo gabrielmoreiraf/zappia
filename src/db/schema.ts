@@ -134,6 +134,9 @@ export const users = pgTable("users", {
   name: text("name"),
   passwordHash: text("password_hash").notNull(),
   role: userRoleEnum("role").default("member").notNull(),
+  // Perfil (Fase 8): foto e plano da conta (assinatura do Zappia).
+  image: text("image"),
+  plan: text("plan").default("free").notNull(),
   // null enquanto não confirmou o código de 6 dígitos.
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })

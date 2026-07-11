@@ -73,9 +73,11 @@ function Logo() {
 export function Sidebar({
   userName,
   userEmail,
+  userImage,
 }: {
   userName: string;
   userEmail: string;
+  userImage?: string | null;
 }) {
   const pathname = usePathname();
   return (
@@ -110,19 +112,35 @@ export function Sidebar({
         ))}
       </nav>
       <div className="mt-3 flex items-center gap-2.5 p-2.5 rounded-xl bg-slate-50">
-        <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">
-          {(userName || userEmail).charAt(0).toUpperCase()}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold text-slate-800 truncate">
-            {userName || "Minha conta"}
-          </div>
-          <div className="text-xs text-slate-400 truncate">{userEmail}</div>
-        </div>
+        <Link
+          href="/perfil"
+          className="flex items-center gap-2.5 min-w-0 flex-1 group"
+        >
+          <span className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold overflow-hidden shrink-0">
+            {userImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={userImage}
+                alt={userName}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              (userName || userEmail).charAt(0).toUpperCase()
+            )}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-slate-800 truncate group-hover:text-emerald-700">
+              {userName || "Minha conta"}
+            </span>
+            <span className="block text-xs text-slate-400 truncate">
+              {userEmail}
+            </span>
+          </span>
+        </Link>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
           aria-label="Sair"
-          className="text-slate-400 hover:text-slate-600"
+          className="text-slate-400 hover:text-slate-600 shrink-0"
         >
           <LogOut size={16} />
         </button>

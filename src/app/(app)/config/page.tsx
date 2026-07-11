@@ -2,10 +2,12 @@ import { CheckCheck, Phone } from "lucide-react";
 import { getCurrentClient } from "@/lib/current-client";
 import { money } from "@/lib/format";
 import { Header } from "../ui";
+import { NoClient } from "../no-client";
 import { NotificationsCard } from "./notifications-card";
 
 export default async function ConfigPage() {
   const client = await getCurrentClient();
+  if (!client) return <NoClient />;
   const connected =
     !!client.whatsappPhoneId && !client.whatsappPhoneId.startsWith("PENDENTE");
 

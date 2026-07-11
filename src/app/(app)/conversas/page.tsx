@@ -4,6 +4,7 @@ import { getCurrentClient } from "@/lib/current-client";
 import { getConversationsList, getConversationThread } from "@/db/panel";
 import { initials, timeShort } from "@/lib/format";
 import { Header, CONV_STATUS } from "../ui";
+import { NoClient } from "../no-client";
 import { ChatPanel } from "./chat-panel";
 
 export default async function ConversasPage({
@@ -13,6 +14,7 @@ export default async function ConversasPage({
 }) {
   const { c: selectedId } = await searchParams;
   const client = await getCurrentClient();
+  if (!client) return <NoClient />;
   const convos = await getConversationsList(client.id);
   const thread = selectedId
     ? await getConversationThread(client.id, selectedId)

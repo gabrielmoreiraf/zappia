@@ -1,6 +1,7 @@
 import { Bell, Search } from "lucide-react";
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { Toaster } from "@/components/ui/sonner";
+import { getCurrentUser } from "@/lib/current-user";
 import { MobileNav, Sidebar } from "./nav";
 
 // O painel reflete dados ao vivo do banco — nada de HTML estático em cache.
@@ -11,14 +12,16 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
-  if (!session) redirect("/login");
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
 
   return (
     <div className="flex min-h-screen bg-slate-100">
+      <Toaster position="top-center" richColors />
       <Sidebar
-        userName={session.user?.name ?? ""}
-        userEmail={session.user?.email ?? ""}
+        userName={user.name ?? ""}
+        userEmail={user.email}
+        userImage={user.image}
       />
 
       <div className="flex-1 min-w-0 flex flex-col">

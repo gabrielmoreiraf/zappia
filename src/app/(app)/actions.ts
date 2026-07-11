@@ -17,6 +17,7 @@ import { sendText } from "@/lib/whatsapp";
 /** "Assumir": desliga a IA daquela conversa (status → "voce"). */
 export async function assumirConversa(conversationId: string) {
   const client = await getCurrentClient();
+  if (!client) return;
   await db
     .update(conversations)
     .set({ status: "voce", unreadCount: 0 })
@@ -34,6 +35,7 @@ export async function sendReply(conversationId: string, text: string) {
   const body = text.trim();
   if (!body) return;
   const client = await getCurrentClient();
+  if (!client) return;
 
   const [convo] = await db
     .select()
@@ -77,6 +79,7 @@ export async function updateLeadStatus(
   status: "novo" | "contato" | "matriculado",
 ) {
   const client = await getCurrentClient();
+  if (!client) return;
   await db
     .update(leads)
     .set({ status })
@@ -88,6 +91,7 @@ export async function updateLeadStatus(
 
 export async function saveAjustes(formData: FormData) {
   const client = await getCurrentClient();
+  if (!client) return;
   const assistantName = String(formData.get("assistantName") ?? "").trim();
   const welcomeMessage = String(formData.get("welcomeMessage") ?? "").trim();
   const tone = String(formData.get("tone") ?? "Amigável");
@@ -109,6 +113,7 @@ export async function saveAjustes(formData: FormData) {
 
 export async function saveNotifications(formData: FormData) {
   const client = await getCurrentClient();
+  if (!client) return;
   const notificationEmail =
     String(formData.get("notificationEmail") ?? "").trim() || null;
 
@@ -137,6 +142,7 @@ async function writeCourses(clientId: string, courses: Course[]) {
 
 export async function toggleCourse(nome: string) {
   const client = await getCurrentClient();
+  if (!client) return;
   const courses = parseKnowledgeBase(client.knowledgeBase);
   const c = courses.find((x) => x.nome === nome);
   if (!c) return;
@@ -146,6 +152,7 @@ export async function toggleCourse(nome: string) {
 
 export async function upsertCourse(formData: FormData) {
   const client = await getCurrentClient();
+  if (!client) return;
   const courses = parseKnowledgeBase(client.knowledgeBase);
 
   const originalNome = String(formData.get("originalNome") ?? "").trim();
@@ -178,6 +185,7 @@ export async function upsertCourse(formData: FormData) {
 
 export async function deleteCourse(nome: string) {
   const client = await getCurrentClient();
+  if (!client) return;
   const courses = parseKnowledgeBase(client.knowledgeBase).filter(
     (c) => c.nome !== nome,
   );

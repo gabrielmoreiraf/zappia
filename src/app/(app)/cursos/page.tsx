@@ -1,10 +1,12 @@
 import { getCurrentClient } from "@/lib/current-client";
 import { parseKnowledgeBase } from "@/lib/knowledge-base";
 import { Header } from "../ui";
+import { NoClient } from "../no-client";
 import { CoursesManager } from "./courses-manager";
 
 export default async function CursosPage() {
   const client = await getCurrentClient();
+  if (!client) return <NoClient />;
   const courses = parseKnowledgeBase(client.knowledgeBase);
 
   return (
