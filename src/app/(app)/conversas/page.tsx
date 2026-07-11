@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { Mic, Search } from "lucide-react";
+import { redirect } from "next/navigation";
 import { getCurrentClient } from "@/lib/current-client";
 import { getConversationsList, getConversationThread } from "@/db/panel";
 import { initials, timeShort } from "@/lib/format";
-import { redirect } from "next/navigation";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Header, CONV_STATUS } from "../ui";
 import { ChatPanel } from "./chat-panel";
 
@@ -21,18 +23,18 @@ export default async function ConversasPage({
     : null;
 
   const List = (
-    <div
-      className={`bg-white rounded-2xl border border-slate-200 overflow-hidden md:w-80 md:shrink-0 ${
+    <Card
+      className={`p-0 gap-0 overflow-hidden md:w-80 md:shrink-0 ${
         thread ? "hidden md:block" : "block"
       }`}
     >
       <div className="p-3 border-b border-slate-100 flex items-center gap-2">
-        <div className="flex-1 flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2">
-          <Search size={15} className="text-slate-400" />
-          <input
-            placeholder="Buscar conversa"
-            className="bg-transparent text-sm outline-none w-full"
+        <div className="relative flex-1">
+          <Search
+            size={15}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
           />
+          <Input placeholder="Buscar conversa" className="pl-9 h-9" />
         </div>
       </div>
       {convos.length === 0 ? (
@@ -80,7 +82,7 @@ export default async function ConversasPage({
           );
         })
       )}
-    </div>
+    </Card>
   );
 
   const Chat = thread ? (
@@ -101,9 +103,9 @@ export default async function ConversasPage({
       />
     </div>
   ) : (
-    <div className="hidden md:flex flex-1 bg-white rounded-2xl border border-slate-200 items-center justify-center text-sm text-slate-400">
+    <Card className="hidden md:flex flex-1 items-center justify-center text-sm text-slate-400">
       Selecione uma conversa
-    </div>
+    </Card>
   );
 
   return (

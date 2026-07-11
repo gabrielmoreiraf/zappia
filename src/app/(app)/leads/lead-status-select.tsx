@@ -1,34 +1,43 @@
 "use client";
 
 import { useTransition } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { updateLeadStatus } from "../actions";
 import { LEAD_STATUS } from "../ui";
+
+type Status = "novo" | "contato" | "matriculado";
 
 export function LeadStatusSelect({
   leadId,
   status,
 }: {
   leadId: string;
-  status: "novo" | "contato" | "matriculado";
+  status: Status;
 }) {
   const [pending, start] = useTransition();
   return (
-    <select
+    <Select
       value={status}
       disabled={pending}
-      onChange={(e) =>
-        start(() =>
-          updateLeadStatus(
-            leadId,
-            e.target.value as "novo" | "contato" | "matriculado",
-          ),
-        )
-      }
-      className={`text-[11px] px-2 py-1 rounded-full font-medium border-0 outline-none cursor-pointer ${LEAD_STATUS[status].cls} disabled:opacity-50`}
+      onValueChange={(v) => start(() => updateLeadStatus(leadId, v as Status))}
     >
-      <option value="novo">Novo</option>
-      <option value="contato">Em contato</option>
-      <option value="matriculado">Matriculado</option>
-    </select>
+      <SelectTrigger
+        size="sm"
+        className={`h-7 w-auto border-0 text-[11px] font-medium ${LEAD_STATUS[status].cls}`}
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="novo">Novo</SelectItem>
+        <SelectItem value="contato">Em contato</SelectItem>
+        <SelectItem value="matriculado">Matriculado</SelectItem>
+      </SelectContent>
+    </Select>
   );
 }

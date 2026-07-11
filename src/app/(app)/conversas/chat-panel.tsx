@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bot, Mic, Send, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { assumirConversa, sendReply } from "../actions";
 import { initials, timeShort } from "@/lib/format";
 
@@ -76,13 +78,14 @@ export function ChatPanel({
           </div>
         </div>
         {conversation.status !== "voce" && (
-          <button
+          <Button
             onClick={assumir}
             disabled={pending}
-            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-sky-50 text-sky-700 flex items-center gap-1.5 disabled:opacity-50"
+            size="sm"
+            className="bg-sky-50 text-sky-700 hover:bg-sky-100"
           >
             <Users size={13} /> Assumir
-          </button>
+          </Button>
         )}
       </div>
 
@@ -132,19 +135,19 @@ export function ChatPanel({
         onSubmit={enviar}
         className="p-3 border-t border-slate-100 flex items-center gap-2"
       >
-        <input
+        <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Escreva pra assumir a conversa…"
-          className="flex-1 bg-slate-50 rounded-xl px-3 py-2.5 text-sm outline-none"
+          className="flex-1"
         />
-        <button
+        <Button
           type="submit"
+          size="icon"
           disabled={pending || !draft.trim()}
-          className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center disabled:opacity-50"
         >
           <Send size={17} />
-        </button>
+        </Button>
       </form>
     </div>
   );

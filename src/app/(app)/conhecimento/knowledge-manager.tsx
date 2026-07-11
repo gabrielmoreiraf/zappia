@@ -1,7 +1,25 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Pencil, Plus, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { deleteCourse, toggleCourse, upsertCourse } from "../actions";
 import { groupCourses, type Course } from "@/lib/knowledge-base";
 
@@ -31,6 +49,12 @@ export function KnowledgeManager({ courses }: { courses: Course[] }) {
   const [editing, setEditing] = useState<{ course: Course; isNew: boolean } | null>(
     null,
   );
+  const [status, setStatus] = useState<Course["status"]>("confirmar_com_equipe");
+
+  function openEdit(course: Course, isNew: boolean) {
+    setStatus(course.status);
+    setEditing({ course, isNew });
+  }
 
   function info(c: Course): string {
     const parts = [c.categoria || "Geral"];
@@ -42,6 +66,7 @@ export function KnowledgeManager({ courses }: { courses: Course[] }) {
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    fd.set("status", status);
     start(async () => {
       await upsertCourse(fd);
       setEditing(null);
@@ -50,15 +75,12 @@ export function KnowledgeManager({ courses }: { courses: Course[] }) {
 
   return (
     <div>
-      <button
-        onClick={() => setEditing({ course: { ...EMPTY }, isNew: true })}
-        className="text-sm font-medium px-3 py-2 rounded-xl bg-emerald-500 text-white flex items-center gap-1.5 mb-5"
-      >
-        <Plus size={16} /> Adicionar item
-      </button>
+      <Button className="mb-5" onClick={() => openEdit({ ...EMPTY }, true)}>
+        <Plus /> Adicionar item
+      </Button>
 
       {groups.length === 0 && (
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-muted-foreground">
           Nenhum item cadastrado. Clique em “Adicionar item”.
         </p>
       )}
@@ -70,7 +92,7 @@ export function KnowledgeManager({ courses }: { courses: Course[] }) {
               <span className={`w-2 h-2 rounded-full ${DOT[g.cor]}`} />
               <h3 className="text-sm font-semibold text-slate-700">{g.label}</h3>
             </div>
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+            <Card className="p-0 gap-0 overflow-hidden">
               {g.itens.map((c, i) => (
                 <div
                   key={c.nome}
@@ -86,158 +108,147 @@ export function KnowledgeManager({ courses }: { courses: Course[] }) {
                       {info(c)}
                     </div>
                   </div>
-                  <button
-                    onClick={() => setEditing({ course: c, isNew: false })}
-                    className="text-slate-400 hover:text-slate-600 p-1"
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 text-slate-400"
+                    onClick={() => openEdit(c, false)}
                     aria-label="Editar"
                   >
                     <Pencil size={15} />
-                  </button>
-                  <button
-                    onClick={() => start(() => toggleCourse(c.nome))}
+                  </Button>
+                  <Switch
+                    checked={c.ativo}
                     disabled={pending}
+                    onCheckedChange={() => start(() => toggleCourse(c.nome))}
                     aria-label={c.ativo ? "Desativar" : "Ativar"}
-                    className={`w-10 h-6 rounded-full flex items-center px-0.5 transition-colors ${
-                      c.ativo
-                        ? "bg-emerald-500 justify-end"
-                        : "bg-slate-200 justify-start"
-                    }`}
-                  >
-                    <div className="w-5 h-5 rounded-full bg-white" />
-                  </button>
+                  />
                 </div>
               ))}
-            </div>
+            </Card>
           </div>
         ))}
       </div>
 
-      {editing && (
-        <div className="fixed inset-0 z-30 bg-black/30 flex items-end md:items-center justify-center p-0 md:p-4">
-          <div className="bg-white w-full md:max-w-md rounded-t-2xl md:rounded-2xl p-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-slate-900">
-                {editing.isNew ? "Adicionar item" : "Editar item"}
-              </h3>
-              <button onClick={() => setEditing(null)} aria-label="Fechar">
-                <X size={20} className="text-slate-400" />
-              </button>
-            </div>
+      <Dialog
+        open={!!editing}
+        onOpenChange={(o) => !o && setEditing(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editing?.isNew ? "Adicionar item" : "Editar item"}
+            </DialogTitle>
+          </DialogHeader>
+          {editing && (
             <form onSubmit={submit} className="space-y-3">
               <input
                 type="hidden"
                 name="originalNome"
                 defaultValue={editing.isNew ? "" : editing.course.nome}
               />
-              <Field label="Nome">
-                <input
+              <div className="grid gap-2">
+                <Label htmlFor="nome">Nome</Label>
+                <Input
+                  id="nome"
                   name="nome"
                   required
                   defaultValue={editing.course.nome}
                   placeholder="Ex.: Cimento CP-II 50kg"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm outline-none"
                 />
-              </Field>
+              </div>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Categoria">
-                  <input
+                <div className="grid gap-2">
+                  <Label htmlFor="categoria">Categoria</Label>
+                  <Input
+                    id="categoria"
                     name="categoria"
                     list="categorias"
                     defaultValue={editing.course.categoria}
                     placeholder="Ex.: Materiais"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm outline-none"
                   />
                   <datalist id="categorias">
                     {categorias.map((c) => (
                       <option key={c} value={c} />
                     ))}
                   </datalist>
-                </Field>
-                <Field label="Status">
-                  <select
-                    name="status"
-                    defaultValue={editing.course.status}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm outline-none bg-white"
+                </div>
+                <div className="grid gap-2">
+                  <Label>Status</Label>
+                  <Select
+                    value={status}
+                    onValueChange={(v) => setStatus(v as Course["status"])}
                   >
-                    <option value="confirmar_com_equipe">A confirmar</option>
-                    <option value="confirmado">Confirmado</option>
-                  </select>
-                </Field>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="confirmar_com_equipe">
+                        A confirmar
+                      </SelectItem>
+                      <SelectItem value="confirmado">Confirmado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Preço (só se confirmado)">
-                  <input
+                <div className="grid gap-2">
+                  <Label htmlFor="valor">Preço (só se confirmado)</Label>
+                  <Input
+                    id="valor"
                     name="valor"
                     defaultValue={editing.course.valor ?? ""}
                     placeholder="R$ 39,90"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm outline-none"
                   />
-                </Field>
-                <Field label="Detalhe">
-                  <input
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="cargaHoraria">Detalhe</Label>
+                  <Input
+                    id="cargaHoraria"
                     name="cargaHoraria"
                     defaultValue={editing.course.cargaHoraria ?? ""}
                     placeholder="Ex.: em estoque"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm outline-none"
                   />
-                </Field>
+                </div>
               </div>
-              <Field label="Observação">
-                <input
+              <div className="grid gap-2">
+                <Label htmlFor="observacao">Observação</Label>
+                <Input
+                  id="observacao"
                   name="observacao"
                   defaultValue={editing.course.observacao ?? ""}
                   placeholder="entrega em 24h"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm outline-none"
                 />
-              </Field>
+              </div>
               <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  name="ativo"
-                  defaultChecked={editing.course.ativo}
-                  className="w-4 h-4 accent-emerald-500"
-                />
+                <Switch name="ativo" defaultChecked={editing.course.ativo} />
                 Ativo (a IA responde sobre ele)
               </label>
 
               <div className="flex items-center gap-2 pt-2">
-                <button
-                  type="submit"
-                  disabled={pending}
-                  className="px-4 py-2.5 rounded-xl bg-emerald-500 text-white font-semibold text-sm disabled:opacity-50"
-                >
+                <Button type="submit" disabled={pending}>
                   Salvar
-                </button>
+                </Button>
                 {!editing.isNew && (
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    className="text-red-600 ml-auto"
                     onClick={() =>
                       start(async () => {
                         await deleteCourse(editing.course.nome);
                         setEditing(null);
                       })
                     }
-                    className="px-3 py-2.5 rounded-xl text-red-600 text-sm font-medium flex items-center gap-1.5 ml-auto"
                   >
                     <Trash2 size={15} /> Excluir
-                  </button>
+                  </Button>
                 )}
               </div>
             </form>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="text-xs font-medium text-slate-600 block mb-1">
-        {label}
-      </label>
-      {children}
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

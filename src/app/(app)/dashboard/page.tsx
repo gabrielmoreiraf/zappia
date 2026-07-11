@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { getCurrentClient } from "@/lib/current-client";
 import { getDashboard } from "@/db/panel";
 import { initials, tempoResposta } from "@/lib/format";
+import { Card } from "@/components/ui/card";
 import { Header, Metric } from "../ui";
 
 export default async function DashboardPage() {
@@ -32,7 +33,7 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 lg:col-span-2">
+        <Card className="p-5 gap-0 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-slate-800">Atividade na semana</h3>
             <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
@@ -50,9 +51,9 @@ export default async function DashboardPage() {
               </div>
             ))}
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <Card className="p-5 gap-0">
           <h3 className="font-semibold text-slate-800 mb-3">Leads recentes</h3>
           {d.recentLeads.length === 0 ? (
             <p className="text-sm text-slate-400">Nenhum lead ainda.</p>
@@ -75,7 +76,7 @@ export default async function DashboardPage() {
               ))}
             </div>
           )}
-        </div>
+        </Card>
       </div>
 
       <div className="mt-4 bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex items-start gap-3">

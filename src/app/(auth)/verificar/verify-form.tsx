@@ -2,6 +2,9 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { resendCode, verifyEmail } from "../actions";
 
 export function VerifyForm() {
@@ -25,16 +28,15 @@ export function VerifyForm() {
     }
     const chars = clean.split("");
     setDigits((d) => {
-      const next = [...d];
+      const nextDigits = [...d];
       let idx = i;
       for (const c of chars) {
         if (idx > 5) break;
-        next[idx] = c;
+        nextDigits[idx] = c;
         idx++;
       }
-      const focus = Math.min(idx, 5);
-      refs.current[focus]?.focus();
-      return next;
+      refs.current[Math.min(idx, 5)]?.focus();
+      return nextDigits;
     });
   }
 
@@ -50,11 +52,8 @@ export function VerifyForm() {
     setInfo(null);
     start(async () => {
       const res = await verifyEmail(email, code);
-      if (res.ok) {
-        router.push("/login?verified=1");
-      } else {
-        setError(res.error ?? "Não foi possível verificar.");
-      }
+      if (res.ok) router.push("/login?verified=1");
+      else setError(res.error ?? "Não foi possível verificar.");
     });
   }
 
@@ -69,58 +68,63 @@ export function VerifyForm() {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center">
-      <h2 className="font-bold text-slate-900">Confirme seu e-mail</h2>
-      <p className="text-sm text-slate-500 mt-1 mb-5">
-        Enviamos um código de 6 dígitos para
-        <br />
-        <span className="font-medium text-slate-700">{email || "seu e-mail"}</span>
-      </p>
+    <Card>
+      <CardContent className="pt-6 text-center">
+        <h2 className="font-bold text-slate-900">Confirme seu e-mail</h2>
+        <p className="text-sm text-muted-foreground mt-1 mb-5">
+          Enviamos um código de 6 dígitos para
+          <br />
+          <span className="font-medium text-slate-700">
+            {email || "seu e-mail"}
+          </span>
+        </p>
 
-      {error && (
-        <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
-          {error}
-        </div>
-      )}
-      {info && (
-        <div className="mb-4 text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
-          {info}
-        </div>
-      )}
+        {error && (
+          <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+            {error}
+          </div>
+        )}
+        {info && (
+          <div className="mb-4 text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
+            {info}
+          </div>
+        )}
 
-      <form onSubmit={submit}>
-        <div className="flex justify-center gap-2 mb-5">
-          {digits.map((d, i) => (
-            <input
-              key={i}
-              ref={(el) => {
-                refs.current[i] = el;
-              }}
-              value={d}
-              inputMode="numeric"
-              maxLength={i === 0 ? 6 : 1}
-              onChange={(e) => setDigit(i, e.target.value)}
-              onKeyDown={(e) => onKeyDown(i, e)}
-              className="w-11 h-14 text-center text-xl font-bold rounded-xl border border-slate-200 outline-none focus:border-emerald-400"
-            />
-          ))}
-        </div>
-        <button
-          type="submit"
-          disabled={pending || code.length !== 6}
-          className="w-full py-3 rounded-xl bg-emerald-500 text-white font-semibold text-sm disabled:opacity-50"
+        <form onSubmit={submit}>
+          <div className="flex justify-center gap-2 mb-5">
+            {digits.map((d, i) => (
+              <Input
+                key={i}
+                ref={(el) => {
+                  refs.current[i] = el;
+                }}
+                value={d}
+                inputMode="numeric"
+                maxLength={i === 0 ? 6 : 1}
+                onChange={(e) => setDigit(i, e.target.value)}
+                onKeyDown={(e) => onKeyDown(i, e)}
+                className="w-11 h-14 text-center text-xl font-bold"
+              />
+            ))}
+          </div>
+          <Button
+            type="submit"
+            disabled={pending || code.length !== 6}
+            className="w-full"
+          >
+            {pending ? "Verificando…" : "Verificar"}
+          </Button>
+        </form>
+
+        <Button
+          variant="link"
+          onClick={resend}
+          disabled={pending}
+          className="text-emerald-600 mt-3"
         >
-          {pending ? "Verificando…" : "Verificar"}
-        </button>
-      </form>
-
-      <button
-        onClick={resend}
-        disabled={pending}
-        className="text-xs text-emerald-600 font-medium mt-4 disabled:opacity-50"
-      >
-        Reenviar código
-      </button>
-    </div>
+          Reenviar código
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

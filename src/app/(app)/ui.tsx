@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import { Card } from "@/components/ui/card";
 
 export function Header({ title, sub }: { title: string; sub?: string }) {
   return (
@@ -28,7 +29,7 @@ export function Metric({
   tint: keyof typeof TINTS;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-4">
+    <Card className="p-4 gap-0">
       <div
         className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${TINTS[tint]}`}
       >
@@ -36,7 +37,7 @@ export function Metric({
       </div>
       <div className="font-bold text-slate-900 text-xl sm:text-2xl">{value}</div>
       <div className="text-xs text-slate-500 mt-0.5">{label}</div>
-    </div>
+    </Card>
   );
 }
 

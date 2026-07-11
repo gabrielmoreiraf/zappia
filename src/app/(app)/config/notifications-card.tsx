@@ -2,6 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { Check } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { saveNotifications } from "../actions";
 
 interface Prefs {
@@ -20,12 +25,6 @@ const TOGGLES: { key: keyof Prefs; label: string }[] = [
 export function NotificationsCard(initial: Prefs) {
   const [prefs, setPrefs] = useState<Prefs>(initial);
   const [pending, start] = useTransition();
-  const [saved, setSaved] = useState(false);
-
-  function toggle(key: keyof Prefs) {
-    setSaved(false);
-    setPrefs((p) => ({ ...p, [key]: !p[key] }));
-  }
 
   function save() {
     const fd = new FormData();
@@ -35,56 +34,50 @@ export function NotificationsCard(initial: Prefs) {
     if (prefs.notifyDailySummary) fd.set("notifyDailySummary", "on");
     start(async () => {
       await saveNotifications(fd);
-      setSaved(true);
+      toast.success("Notificações salvas!");
     });
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5">
-      <h3 className="text-sm font-semibold text-slate-700 mb-1">Notificações</h3>
-      <p className="text-xs text-slate-400 mb-3">
-        E-mail que recebe os avisos e o resumo.
-      </p>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Notificações</CardTitle>
+        <p className="text-xs text-muted-foreground">
+          E-mail que recebe os avisos e o resumo.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-1">
+        <Input
+          type="email"
+          value={prefs.notificationEmail}
+          onChange={(e) =>
+            setPrefs((p) => ({ ...p, notificationEmail: e.target.value }))
+          }
+          placeholder="seu@email.com"
+          className="mb-2"
+        />
 
-      <input
-        type="email"
-        value={prefs.notificationEmail}
-        onChange={(e) => {
-          setSaved(false);
-          setPrefs((p) => ({ ...p, notificationEmail: e.target.value }));
-        }}
-        placeholder="seu@email.com"
-        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm outline-none focus:border-emerald-400 mb-2"
-      />
-
-      {TOGGLES.map((tg, i) => (
-        <div
-          key={tg.key}
-          className={`flex items-center justify-between py-2.5 ${
-            i < TOGGLES.length - 1 ? "border-b border-slate-50" : ""
-          }`}
-        >
-          <span className="text-sm text-slate-600">{tg.label}</span>
-          <button
-            type="button"
-            onClick={() => toggle(tg.key)}
-            aria-label={tg.label}
-            className={`w-10 h-6 rounded-full flex items-center px-0.5 transition-colors ${
-              prefs[tg.key] ? "bg-emerald-500 justify-end" : "bg-slate-200 justify-start"
+        {TOGGLES.map((tg, i) => (
+          <div
+            key={tg.key}
+            className={`flex items-center justify-between py-2.5 ${
+              i < TOGGLES.length - 1 ? "border-b border-slate-50" : ""
             }`}
           >
-            <div className="w-5 h-5 rounded-full bg-white" />
-          </button>
-        </div>
-      ))}
+            <span className="text-sm text-slate-600">{tg.label}</span>
+            <Switch
+              checked={prefs[tg.key] as boolean}
+              onCheckedChange={(v) =>
+                setPrefs((p) => ({ ...p, [tg.key]: v }))
+              }
+            />
+          </div>
+        ))}
 
-      <button
-        onClick={save}
-        disabled={pending}
-        className="mt-4 px-4 py-2.5 rounded-xl bg-emerald-500 text-white font-semibold text-sm flex items-center gap-1.5 disabled:opacity-50"
-      >
-        <Check size={16} /> {saved ? "Salvo!" : "Salvar notificações"}
-      </button>
-    </div>
+        <Button onClick={save} disabled={pending} className="mt-4">
+          <Check /> Salvar notificações
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

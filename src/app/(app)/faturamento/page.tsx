@@ -1,5 +1,6 @@
 import { getBilling } from "@/db/agency";
 import { money } from "@/lib/format";
+import { Card } from "@/components/ui/card";
 import { Header } from "../ui";
 
 export default async function FaturamentoPage() {
@@ -17,17 +18,14 @@ export default async function FaturamentoPage() {
 
       <div className="grid gap-3 mb-5 grid-cols-1 sm:grid-cols-3">
         {cards.map((c) => (
-          <div
-            key={c.label}
-            className="bg-white rounded-2xl border border-slate-200 p-5"
-          >
+          <Card key={c.label} className="p-5 gap-0">
             <div className="text-xs text-slate-500 mb-1">{c.label}</div>
             <div className={`text-2xl font-bold ${c.tint}`}>{c.value}</div>
-          </div>
+          </Card>
         ))}
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <Card className="p-0 gap-0 overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100 flex text-xs font-semibold text-slate-400">
           <span className="flex-1">Cliente</span>
           <span className="w-24 text-right">Receita</span>
@@ -51,7 +49,7 @@ export default async function FaturamentoPage() {
             </span>
           </div>
         ))}
-      </div>
+      </Card>
 
       <p className="text-xs text-slate-400 mt-3">
         Custo estimado = tokens do Haiku + minutos de áudio (Groq) + mensagens

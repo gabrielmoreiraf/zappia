@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { Download, Filter } from "lucide-react";
+import { redirect } from "next/navigation";
 import { getCurrentClient } from "@/lib/current-client";
 import { getLeads } from "@/db/panel";
 import { dayLabel, initials } from "@/lib/format";
-import { redirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Header } from "../ui";
 import { LeadStatusSelect } from "./lead-status-select";
 
@@ -42,28 +44,25 @@ export default async function LeadsPage({
         {FILTERS.map((f) => {
           const on = (status ?? "") === f.key;
           return (
-            <Link
+            <Button
               key={f.key}
-              href={f.key ? `/leads?st=${f.key}` : "/leads"}
-              className={`text-sm font-medium px-3 py-1.5 rounded-lg border ${
-                on
-                  ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                  : "bg-white border-slate-200 text-slate-600"
-              }`}
+              asChild
+              size="sm"
+              variant={on ? "outline" : "ghost"}
+              className={on ? "border-emerald-200 bg-emerald-50 text-emerald-700" : ""}
             >
-              {f.label}
-            </Link>
+              <Link href={f.key ? `/leads?st=${f.key}` : "/leads"}>{f.label}</Link>
+            </Button>
           );
         })}
-        <a
-          href="/api/leads/export"
-          className="text-sm font-medium px-3 py-1.5 rounded-lg bg-emerald-500 text-white flex items-center gap-1.5 ml-auto"
-        >
-          <Download size={15} /> Exportar
-        </a>
+        <Button asChild size="sm" className="ml-auto">
+          <a href="/api/leads/export">
+            <Download /> Exportar
+          </a>
+        </Button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <Card className="p-0 gap-0 overflow-hidden">
         {rows.length === 0 ? (
           <p className="p-4 text-sm text-slate-400">Nenhum lead nesse filtro.</p>
         ) : (
@@ -95,7 +94,7 @@ export default async function LeadsPage({
             </div>
           ))
         )}
-      </div>
+      </Card>
     </div>
   );
 }

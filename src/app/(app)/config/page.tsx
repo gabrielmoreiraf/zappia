@@ -1,7 +1,9 @@
 import { CheckCheck, Phone } from "lucide-react";
+import { redirect } from "next/navigation";
 import { getCurrentClient } from "@/lib/current-client";
 import { money } from "@/lib/format";
-import { redirect } from "next/navigation";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Header } from "../ui";
 import { NotificationsCard } from "./notifications-card";
 
@@ -16,7 +18,8 @@ export default async function ConfigPage() {
       <Header title="Configurações" sub="Conexão, notificações e plano." />
       <div className="space-y-4 max-w-xl">
         {/* WhatsApp */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
+        <Card>
+          <CardContent>
           <h3 className="text-sm font-semibold text-slate-700 mb-3">
             WhatsApp
           </h3>
@@ -38,17 +41,15 @@ export default async function ConfigPage() {
                 </div>
               )}
             </div>
-            <span
-              className={`text-xs font-medium px-3 py-1.5 rounded-lg ${
-                connected
-                  ? "text-slate-500 border border-slate-200"
-                  : "bg-amber-100 text-amber-700"
-              }`}
+            <Badge
+              variant={connected ? "outline" : "secondary"}
+              className={connected ? "" : "bg-amber-100 text-amber-700"}
             >
               {connected ? "Trocar" : "Conectar"}
-            </span>
+            </Badge>
           </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Notificações */}
         <NotificationsCard
@@ -59,19 +60,21 @@ export default async function ConfigPage() {
         />
 
         {/* Plano */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-semibold text-slate-700">
-              Plano {client.plan === "pro" ? "Pro" : "Start"}
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {money(client.monthlyFee)}/mês
-            </p>
-          </div>
-          <span className="text-xs font-medium text-emerald-700 px-3 py-1.5 rounded-lg bg-emerald-50">
-            Gerenciar
-          </span>
-        </div>
+        <Card>
+          <CardContent className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-700">
+                Plano {client.plan === "pro" ? "Pro" : "Start"}
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {money(client.monthlyFee)}/mês
+              </p>
+            </div>
+            <Badge variant="secondary" className="bg-emerald-50 text-emerald-700">
+              Gerenciar
+            </Badge>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

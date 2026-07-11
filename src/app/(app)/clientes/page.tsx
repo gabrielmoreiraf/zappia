@@ -1,5 +1,7 @@
 import { Building2, ChevronRight } from "lucide-react";
 import { getClientsOverview } from "@/db/agency";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { enterClient } from "../agency-actions";
 import { Header } from "../ui";
 import { NewClientButton } from "./new-client-button";
@@ -15,7 +17,7 @@ export default async function ClientesPage() {
       />
       <NewClientButton />
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <Card className="p-0 gap-0 overflow-hidden">
         {rows.length === 0 ? (
           <p className="p-4 text-sm text-slate-400">Nenhum cliente ainda.</p>
         ) : (
@@ -44,9 +46,9 @@ export default async function ClientesPage() {
                   </div>
                   <div className="text-[10px] text-slate-400">conversas</div>
                 </div>
-                <span className="text-[11px] px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-600">
+                <Badge variant="secondary">
                   {c.plan === "pro" ? "Pro" : "Start"}
-                </span>
+                </Badge>
                 <span
                   className={`w-2.5 h-2.5 rounded-full ${
                     c.health === "ok" ? "bg-emerald-500" : "bg-amber-400"
@@ -58,7 +60,7 @@ export default async function ClientesPage() {
             </form>
           ))
         )}
-      </div>
+      </Card>
     </div>
   );
 }
