@@ -119,3 +119,64 @@ body {
     @apply font-sans;
   }
 }
+
+/* Landing — animações (mockup de chat + fundo) */
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-bubble-in {
+  animation: bubble-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes dot-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  30% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+.animate-dot-bounce {
+  animation: dot-bounce 1s ease-in-out infinite;
+}
+
+@keyframes blob-float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(20px, -25px) scale(1.08);
+  }
+  66% {
+    transform: translate(-15px, 15px) scale(0.95);
+  }
+}
+.animate-blob {
+  animation: blob-float 12s ease-in-out infinite;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-fade-up {
+  animation: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}

@@ -9,12 +9,11 @@ export default async function PerfilPage() {
 
   return (
     <div>
-      <Header title="Meu perfil" sub="Seus dados, foto, senha e plano da conta." />
+      <Header title="Meu perfil" sub="Seus dados, foto e senha." />
       <ProfileForm
         user={{
           name: user.name ?? "",
           email: user.email,
-          plan: user.plan,
           image: user.image,
         }}
       />

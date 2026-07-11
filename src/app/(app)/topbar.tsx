@@ -66,7 +66,7 @@ export function Topbar({
   }
 
   return (
-    <header className="bg-white border-b border-slate-100 px-4 py-2.5 flex items-center gap-3 sticky top-0 z-10">
+    <header className="h-16 shrink-0 bg-white border-b border-slate-100 px-4 flex items-center gap-3 sticky top-0 z-10">
       <Link href="/dashboard" className="md:hidden flex items-center gap-2 shrink-0">
         <span className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center">
           <Bot size={16} className="text-white" />

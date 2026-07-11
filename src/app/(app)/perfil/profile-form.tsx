@@ -17,7 +17,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/password-input";
 import { PASSWORD_RULES, isPasswordValid } from "@/lib/password";
-import { PLAN_NAME, PLAN_PRICE_LABEL } from "@/lib/plan";
 import { changePassword, saveAvatar, updateProfile } from "../profile-actions";
 
 /**
@@ -63,7 +62,6 @@ export function ProfileForm({
   user: {
     name: string;
     email: string;
-    plan: string;
     image: string | null;
   };
 }) {
@@ -220,21 +218,6 @@ export function ProfileForm({
                 disabled={!editing}
                 required
               />
-            </div>
-            <div className="grid gap-2">
-              <Label>Plano</Label>
-              <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3.5 py-2.5">
-                <span className="text-sm font-medium text-slate-700">
-                  Plano {PLAN_NAME}
-                </span>
-                <span className="text-sm text-slate-500">
-                  {PLAN_PRICE_LABEL}/mês
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Plano único com tudo incluído. Cobrança automática entra numa fase
-                futura.
-              </p>
             </div>
             {editing && (
               <div className="flex items-center gap-2">

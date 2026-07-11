@@ -22,6 +22,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { PLAN_FEATURES, PLAN_NAME, PLAN_PRICE_LABEL } from "@/lib/plan";
+import { HeroChatDemo } from "./hero-chat-demo";
 
 const FEATURES = [
   {
@@ -148,33 +149,57 @@ export default async function LandingPage() {
 
       {/* HERO */}
       <section className="relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white">
-        <div className="mx-auto max-w-4xl px-4 py-20 md:py-28 text-center">
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
-            <ShieldCheck size={13} /> API oficial da Meta · sem risco de banimento
-          </span>
-          <h1 className="mt-5 text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 leading-[1.1]">
-            Seu WhatsApp atendendo sozinho,
-            <br className="hidden md:block" /> com{" "}
-            <span className="text-emerald-600">Inteligência Artificial</span>
-          </h1>
-          <p className="mt-5 text-lg text-slate-600 max-w-2xl mx-auto">
-            A Zappia responde texto e áudio, treinada no conhecimento do seu
-            negócio, captura leads e só chama você quando realmente precisa. Sem
-            programar.
-          </p>
-          <div className="mt-8 flex items-center justify-center gap-3 flex-wrap">
-            <Button asChild size="lg">
-              <Link href={loggedIn ? "/dashboard" : "/cadastro"}>
-                Começar grátis <ArrowRight size={16} />
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <a href="#como-funciona">Ver como funciona</a>
-            </Button>
+        <div className="mx-auto max-w-6xl px-4 py-16 md:py-24 grid gap-12 lg:grid-cols-2 items-center">
+          <div className="text-center lg:text-left">
+            <span
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full animate-fade-up"
+              style={{ animationDelay: "0s" }}
+            >
+              <ShieldCheck size={13} /> API oficial da Meta · sem risco de banimento
+            </span>
+            <h1
+              className="mt-5 text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 leading-[1.1] animate-fade-up"
+              style={{ animationDelay: "0.08s" }}
+            >
+              Seu WhatsApp atendendo sozinho,{" "}
+              <span className="text-emerald-600">com Inteligência Artificial</span>
+            </h1>
+            <p
+              className="mt-5 text-lg text-slate-600 max-w-xl mx-auto lg:mx-0 animate-fade-up"
+              style={{ animationDelay: "0.16s" }}
+            >
+              A Zappia responde texto e áudio, treinada no conhecimento do seu
+              negócio, captura leads e só chama você quando realmente precisa. Sem
+              programar.
+            </p>
+            <div
+              className="mt-8 flex items-center justify-center lg:justify-start gap-3 flex-wrap animate-fade-up"
+              style={{ animationDelay: "0.24s" }}
+            >
+              <Button asChild size="lg">
+                <Link href={loggedIn ? "/dashboard" : "/cadastro"}>
+                  Começar grátis <ArrowRight size={16} />
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <a href="#como-funciona">Ver como funciona</a>
+              </Button>
+            </div>
+            <p
+              className="mt-6 text-sm text-slate-500 animate-fade-up"
+              style={{ animationDelay: "0.32s" }}
+            >
+              Funciona pra qualquer segmento — clínicas, lojas, cursos, serviços e
+              mais.
+            </p>
           </div>
-          <p className="mt-6 text-sm text-slate-500">
-            Funciona pra qualquer segmento — clínicas, lojas, cursos, serviços e mais.
-          </p>
+
+          <div
+            className="animate-fade-up"
+            style={{ animationDelay: "0.2s" }}
+          >
+            <HeroChatDemo />
+          </div>
         </div>
       </section>
 

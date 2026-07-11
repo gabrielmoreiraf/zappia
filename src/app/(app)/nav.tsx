@@ -86,12 +86,13 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   return (
-    <aside className="hidden md:flex w-72 shrink-0 bg-white border-r border-slate-200 p-4 flex-col h-screen sticky top-0">
-      <div className="px-2 pt-1 pb-4 mb-3 border-b border-slate-100">
+    <aside className="hidden md:flex w-72 shrink-0 bg-white border-r border-slate-200 flex-col h-screen sticky top-0">
+      {/* Mesma altura da topbar — as bordas ficam alinhadas numa faixa só. */}
+      <div className="h-16 shrink-0 flex items-center px-4 border-b border-slate-100">
         <Logo />
       </div>
 
-      <nav className="flex-1 space-y-5 overflow-y-auto">
+      <nav className="flex-1 p-4 space-y-5 overflow-y-auto">
         {/* Painel do cliente ativo */}
         {activeClientName && (
           <div>
