@@ -2,9 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import {
+  CheckCheck,
+  Loader2,
+  MessageCircle,
+  Phone,
+  ShieldCheck,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID;
 const META_WA_CONFIG_ID = process.env.NEXT_PUBLIC_META_WA_CONFIG_ID;
@@ -56,9 +64,24 @@ function loadFacebookSdk(): Promise<void> {
   return sdkLoadPromise;
 }
 
-export function ConnectWhatsAppButton({ connected }: { connected: boolean }) {
+type Status = "idle" | "waiting-popup" | "finishing";
+
+const STEPS = [
+  { label: "Conectar com o Facebook" },
+  { label: "Confirmar o número por SMS" },
+  { label: "Pronto" },
+];
+
+export function WhatsAppConnectionCard({
+  connected,
+  number,
+}: {
+  connected: boolean;
+  number: string | null;
+}) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<Status>("idle");
+  const [switching, setSwitching] = useState(false);
   const finishing = useRef(false);
 
   useEffect(() => {
@@ -79,13 +102,14 @@ export function ConnectWhatsAppButton({ connected }: { connected: boolean }) {
 
       if (data.event === "FINISH" && !finishing.current) {
         finishing.current = true;
+        setStatus("finishing");
         const { phone_number_id, waba_id } = data.data ?? {};
         void finishConnection(phone_number_id, waba_id);
       } else if (data.event === "CANCEL") {
-        setLoading(false);
+        setStatus("idle");
         toast.info("Conexão cancelada.");
       } else if (data.event === "ERROR") {
-        setLoading(false);
+        setStatus("idle");
         toast.error("A Meta reportou um erro na conexão.");
       }
     }
@@ -96,7 +120,7 @@ export function ConnectWhatsAppButton({ connected }: { connected: boolean }) {
 
   async function finishConnection(phoneNumberId?: string, wabaId?: string) {
     if (!phoneNumberId || !wabaId) {
-      setLoading(false);
+      setStatus("idle");
       toast.error("A Meta não retornou os dados do número.");
       return;
     }
@@ -109,11 +133,12 @@ export function ConnectWhatsAppButton({ connected }: { connected: boolean }) {
       const json = (await res.json()) as { number?: string; error?: string };
       if (!res.ok) throw new Error(json.error ?? "Falha ao conectar");
       toast.success(`WhatsApp conectado: ${json.number}`);
+      setSwitching(false);
       router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao conectar");
     } finally {
-      setLoading(false);
+      setStatus("idle");
       finishing.current = false;
     }
   }
@@ -123,14 +148,14 @@ export function ConnectWhatsAppButton({ connected }: { connected: boolean }) {
       toast.error("Conexão com a Meta não configurada.");
       return;
     }
-    setLoading(true);
+    setStatus("waiting-popup");
     await loadFacebookSdk();
     window.FB!.login(
       (response) => {
         // A confirmação de verdade (phone_number_id/waba_id) chega pelo
         // postMessage "WA_EMBEDDED_SIGNUP" tratado em onMessage acima.
         if (!response.authResponse) {
-          setLoading(false);
+          setStatus("idle");
         }
       },
       {
@@ -142,19 +167,108 @@ export function ConnectWhatsAppButton({ connected }: { connected: boolean }) {
     );
   }
 
+  // Já conectado e sem uma nova conexão em andamento: resumo compacto.
+  if (connected && !switching) {
+    return (
+      <Card>
+        <CardContent>
+          <h3 className="text-sm font-semibold text-slate-700 mb-3">
+            WhatsApp
+          </h3>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <Phone size={18} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-slate-800">
+                {number ?? "Número não definido"}
+              </div>
+              <div className="text-xs text-emerald-600 flex items-center gap-1">
+                <CheckCheck size={13} /> Conectado · API oficial
+              </div>
+            </div>
+            <Badge
+              variant="outline"
+              className="cursor-pointer"
+              onClick={() => setSwitching(true)}
+            >
+              Trocar
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const busy = status !== "idle";
+
   return (
-    <Badge
-      variant={connected ? "outline" : "secondary"}
-      className={`cursor-pointer ${connected ? "" : "bg-amber-100 text-amber-700"}`}
-      onClick={loading ? undefined : connect}
-    >
-      {loading ? (
-        <Loader2 size={12} className="animate-spin" />
-      ) : connected ? (
-        "Trocar"
-      ) : (
-        "Conectar"
-      )}
-    </Badge>
+    <Card className="border-emerald-100">
+      <CardContent className="flex flex-col md:flex-row items-center gap-6 py-8">
+        <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+          <MessageCircle size={28} />
+        </div>
+
+        <div className="flex-1 min-w-0 text-center md:text-left">
+          <h3 className="text-lg font-semibold text-slate-800">
+            Conectar o WhatsApp
+          </h3>
+          <p className="text-sm text-slate-500 mt-1 flex items-center gap-1.5 justify-center md:justify-start">
+            <ShieldCheck size={14} className="text-emerald-500 shrink-0" />
+            Conecte o número oficial pela API da Meta. Sem risco de
+            banimento.
+          </p>
+
+          <ol className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-4 justify-center md:justify-start">
+            {STEPS.map((step, i) => {
+              const stepDone =
+                (i === 0 && busy) || (i === 1 && status === "finishing");
+              return (
+                <li
+                  key={step.label}
+                  className="flex items-center gap-1.5 text-xs font-medium"
+                >
+                  <span
+                    className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
+                      stepDone
+                        ? "bg-emerald-500 text-white"
+                        : "bg-slate-100 text-slate-400"
+                    }`}
+                  >
+                    {stepDone ? <CheckCheck size={10} /> : i + 1}
+                  </span>
+                  <span className={stepDone ? "text-slate-700" : "text-slate-400"}>
+                    {step.label}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+
+        <div className="flex flex-col items-center gap-2 shrink-0">
+          <Button onClick={connect} disabled={busy}>
+            {busy ? (
+              <>
+                <Loader2 size={15} className="animate-spin" />
+                {status === "waiting-popup"
+                  ? "Aguardando o Facebook…"
+                  : "Finalizando…"}
+              </>
+            ) : (
+              "Conectar número"
+            )}
+          </Button>
+          {switching && !busy && (
+            <button
+              onClick={() => setSwitching(false)}
+              className="text-xs text-slate-400 hover:text-slate-600"
+            >
+              Cancelar
+            </button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
