@@ -55,7 +55,7 @@ function NavLink({ item, pathname }: { item: Item; pathname: string }) {
   return (
     <Link
       href={item.href}
-      className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium mb-0.5 ${
+      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium mb-0.5 ${
         on ? "bg-emerald-50 text-emerald-700" : "text-slate-600 hover:bg-slate-50"
       }`}
     >
@@ -73,12 +73,12 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   return (
-    <aside className="hidden md:flex w-60 shrink-0 bg-white border-r border-slate-200 p-3 flex-col h-screen sticky top-0">
-      <div className="px-2 py-2 mb-2">
+    <aside className="hidden md:flex w-72 shrink-0 bg-white border-r border-slate-200 p-4 flex-col h-screen sticky top-0">
+      <div className="px-2 py-2 mb-3">
         <Logo />
       </div>
 
-      <nav className="flex-1 space-y-4 overflow-y-auto">
+      <nav className="flex-1 space-y-5 overflow-y-auto">
         {/* Painel do cliente ativo */}
         {activeClientName && (
           <div>
