@@ -27,7 +27,7 @@ export default async function AppLayout({
     : { items: [], count: 0 };
 
   return (
-    <div className="flex min-h-screen bg-slate-100">
+    <div className="flex h-screen overflow-hidden bg-slate-100">
       <Sidebar isAdmin={isAdmin} activeClientName={client?.name ?? null} />
 
       <div className="flex-1 min-w-0 flex flex-col">
@@ -39,7 +39,10 @@ export default async function AppLayout({
           userImage={user.image}
         />
 
-        <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-6">{children}</main>
+        {/* Rola dentro do main; a shell (sidebar/topbar) fica fixa. */}
+        <main className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pb-24 md:pb-6">
+          {children}
+        </main>
       </div>
 
       <MobileNav isAdmin={isAdmin} hasActiveClient={!!client} />

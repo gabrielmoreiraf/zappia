@@ -67,11 +67,14 @@ export function ConversasLive({
 
   const List = (
     <Card
-      className={`p-0 gap-0 overflow-hidden md:w-80 md:shrink-0 ${
-        thread ? "hidden md:block" : "block"
+      className={`p-0 gap-0 overflow-hidden md:w-80 md:shrink-0 flex flex-col min-h-0 ${
+        thread ? "hidden md:flex" : "flex"
       }`}
     >
-      <form action="/conversas" className="p-3 border-b border-slate-100">
+      <form
+        action="/conversas"
+        className="p-3 border-b border-slate-100 shrink-0"
+      >
         <div className="relative flex-1">
           <Search
             size={15}
@@ -85,6 +88,7 @@ export function ConversasLive({
           />
         </div>
       </form>
+      <div className="flex-1 min-h-0 overflow-y-auto">
       {convos.length === 0 ? (
         <p className="p-4 text-sm text-slate-500">
           {term
@@ -134,11 +138,12 @@ export function ConversasLive({
           );
         })
       )}
+      </div>
     </Card>
   );
 
   const Chat = thread ? (
-    <div className="flex-1 flex">
+    <div className="flex-1 flex min-h-0">
       <ChatPanel
         conversation={thread.conversation}
         messages={thread.messages}
@@ -152,7 +157,7 @@ export function ConversasLive({
   );
 
   return (
-    <div className="flex gap-4">
+    <div className="flex gap-4 flex-1 min-h-0 mt-1">
       {List}
       {Chat}
     </div>

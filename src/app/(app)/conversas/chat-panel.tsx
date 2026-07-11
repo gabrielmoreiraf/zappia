@@ -68,10 +68,7 @@ export function ChatPanel({
   }
 
   return (
-    <div
-      className="flex-1 bg-white rounded-2xl border border-slate-200 flex flex-col overflow-hidden"
-      style={{ minHeight: 520 }}
-    >
+    <div className="flex-1 min-h-0 bg-white rounded-2xl border border-slate-200 flex flex-col overflow-hidden">
       <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <button

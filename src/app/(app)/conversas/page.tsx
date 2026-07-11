@@ -22,7 +22,7 @@ export default async function ConversasPage({
     : null;
 
   return (
-    <div>
+    <div className="h-full flex flex-col min-h-0">
       <Header title="Conversas" sub="Tudo que chega no WhatsApp, num lugar só." />
       <ConversasLive
         key={`${selectedId ?? ""}|${q ?? ""}`}
