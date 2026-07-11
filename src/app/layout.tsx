@@ -25,7 +25,7 @@ export default function RootLayout({
     <html lang="pt-BR" className={cn("h-full antialiased", jakarta.variable)}>
       <body className="min-h-full">
         {children}
-        <Toaster position="top-center" richColors />
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   );

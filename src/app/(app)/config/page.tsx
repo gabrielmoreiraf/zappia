@@ -16,7 +16,7 @@ export default async function ConfigPage() {
   return (
     <div>
       <Header title="Configurações" sub="Conexão, notificações e plano." />
-      <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-2 items-start">
         {/* WhatsApp */}
         <Card>
           <CardContent>

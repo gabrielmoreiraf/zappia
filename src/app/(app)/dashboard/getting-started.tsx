@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, Check, Phone, Sparkles, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, BookOpen, Phone, Sparkles, SlidersHorizontal } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface Step {
@@ -45,6 +45,10 @@ export function GettingStarted({
     },
   ];
 
+  // Passos já concluídos somem; o card inteiro desaparece quando termina o setup.
+  const pending = steps.filter((s) => !s.done);
+  if (pending.length === 0) return null;
+
   return (
     <Card className="mb-6 border-emerald-100 bg-emerald-50/40">
       <CardContent>
@@ -53,7 +57,7 @@ export function GettingStarted({
           <h3 className="font-semibold text-slate-800">Primeiros passos</h3>
         </div>
         <div className="space-y-2">
-          {steps.map((s, i) => {
+          {pending.map((s, i) => {
             const Icon = s.icon;
             return (
               <Link
@@ -61,23 +65,12 @@ export function GettingStarted({
                 href={s.href}
                 className="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-100 hover:border-emerald-200 transition-colors group"
               >
-                <span
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                    s.done
-                      ? "bg-emerald-500 text-white"
-                      : "bg-emerald-50 text-emerald-600"
-                  }`}
-                >
-                  {s.done ? <Check size={16} /> : <Icon size={16} />}
+                <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-emerald-50 text-emerald-600">
+                  <Icon size={16} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                  <div className="text-sm font-semibold text-slate-800">
                     <span className="text-slate-400">{i + 1}.</span> {s.title}
-                    {s.done && (
-                      <span className="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">
-                        feito
-                      </span>
-                    )}
                   </div>
                   <div className="text-xs text-slate-500 mt-0.5">{s.desc}</div>
                 </div>
