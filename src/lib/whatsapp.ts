@@ -43,6 +43,46 @@ export async function downloadMedia(url: string): Promise<Buffer> {
   return Buffer.from(await r.arrayBuffer());
 }
 
+/**
+ * Onboarding (Embedded Signup): assina o app para receber webhooks da WABA
+ * do cliente. Usa nosso token de sistema, que já tem acesso a ela porque o
+ * Embedded Signup a compartilha com o nosso Business Portfolio.
+ */
+export async function subscribeApp(wabaId: string): Promise<void> {
+  const r = await fetch(`${GRAPH}/${VERSION}/${wabaId}/subscribed_apps`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${env.whatsappToken}` },
+  });
+  if (!r.ok) throw new Error(`subscribeApp ${r.status}: ${await r.text()}`);
+}
+
+/** Onboarding: registra o número na Cloud API (obrigatório antes de enviar). */
+export async function registerPhoneNumber(
+  phoneNumberId: string,
+  pin: string,
+): Promise<void> {
+  const r = await fetch(`${GRAPH}/${VERSION}/${phoneNumberId}/register`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.whatsappToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ messaging_product: "whatsapp", pin }),
+  });
+  if (!r.ok) throw new Error(`registerPhoneNumber ${r.status}: ${await r.text()}`);
+}
+
+/** Onboarding: número em formato legível (ex.: +55 85 9****-1268) pra exibir no painel. */
+export async function getDisplayPhoneNumber(phoneNumberId: string): Promise<string> {
+  const r = await fetch(
+    `${GRAPH}/${VERSION}/${phoneNumberId}?fields=display_phone_number`,
+    { headers: { Authorization: `Bearer ${env.whatsappToken}` } },
+  );
+  if (!r.ok) throw new Error(`getDisplayPhoneNumber ${r.status}: ${await r.text()}`);
+  const j = (await r.json()) as { display_phone_number: string };
+  return j.display_phone_number;
+}
+
 /** Passo 9 do pipeline: envia a resposta de texto ao cliente final. */
 export async function sendText(
   phoneNumberId: string,

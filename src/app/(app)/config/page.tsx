@@ -5,6 +5,7 @@ import { PLAN_NAME, PLAN_PRICE_LABEL } from "@/lib/plan";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Header } from "../ui";
+import { ConnectWhatsAppButton } from "./connect-whatsapp-button";
 import { NotificationsCard } from "./notifications-card";
 
 export default async function ConfigPage() {
@@ -42,12 +43,7 @@ export default async function ConfigPage() {
                     </div>
                   )}
                 </div>
-                <Badge
-                  variant={connected ? "outline" : "secondary"}
-                  className={connected ? "" : "bg-amber-100 text-amber-700"}
-                >
-                  {connected ? "Trocar" : "Conectar"}
-                </Badge>
+                <ConnectWhatsAppButton connected={connected} />
               </div>
             </CardContent>
           </Card>
