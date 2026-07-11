@@ -100,14 +100,14 @@ export async function touchConversation(
     .where(eq(conversations.id, conversationId));
 }
 
-/** Upsert simples de lead: 1 por conversa (§5.7). */
+/** Upsert simples de lead: 1 por conversa (§5.7). Retorna se criou um novo. */
 export async function upsertLead(input: {
   clientId: string;
   conversationId: string;
   contactName?: string | null;
   courseInterest?: string | null;
   channel?: "anuncio" | "organico";
-}): Promise<void> {
+}): Promise<{ created: boolean }> {
   const [existing] = await db
     .select({ id: leads.id })
     .from(leads)
@@ -121,7 +121,7 @@ export async function upsertLead(input: {
         .set({ courseInterest: input.courseInterest })
         .where(eq(leads.id, existing.id));
     }
-    return;
+    return { created: false };
   }
 
   await db.insert(leads).values({
@@ -132,6 +132,7 @@ export async function upsertLead(input: {
     channel: input.channel ?? "organico",
     status: "novo",
   });
+  return { created: true };
 }
 
 /** Registra consumo pra tela de Faturamento (§6). */

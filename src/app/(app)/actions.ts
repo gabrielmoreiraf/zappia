@@ -105,6 +105,26 @@ export async function saveAjustes(formData: FormData) {
   revalidatePath("/ajustes");
 }
 
+/* ---------- Configurações · notificações (§4.8 / Fase 7) ---------- */
+
+export async function saveNotifications(formData: FormData) {
+  const client = await getCurrentClient();
+  const notificationEmail =
+    String(formData.get("notificationEmail") ?? "").trim() || null;
+
+  await db
+    .update(clients)
+    .set({
+      notificationEmail,
+      notifyNewLead: formData.get("notifyNewLead") != null,
+      notifyHandoff: formData.get("notifyHandoff") != null,
+      notifyDailySummary: formData.get("notifyDailySummary") != null,
+    })
+    .where(eq(clients.id, client.id));
+
+  revalidatePath("/config");
+}
+
 /* ---------- Base de cursos (§4.6) ---------- */
 
 async function writeCourses(clientId: string, courses: Course[]) {

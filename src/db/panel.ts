@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, inArray } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, lt } from "drizzle-orm";
 import { db } from "./index";
 import {
   conversations,
@@ -155,6 +155,55 @@ export async function getDashboard(clientId: string): Promise<DashboardData> {
     week,
     recentLeads,
     handoffsHoje,
+  };
+}
+
+/* ---------- resumo diário (Fase 7 · e-mail) ---------- */
+
+export interface DailySummary {
+  conversas: number;
+  leads: number;
+  resolvidoPct: number;
+  handoffs: number;
+}
+
+/** Estatísticas de ONTEM para um cliente (usado no resumo diário por e-mail). */
+export async function getYesterdaySummary(
+  clientId: string,
+): Promise<DailySummary> {
+  const start = daysAgo(1);
+  const end = startOfToday();
+
+  const active = await db
+    .select({ status: conversations.status })
+    .from(conversations)
+    .where(
+      and(
+        eq(conversations.clientId, clientId),
+        gte(conversations.lastMessageAt, start),
+        lt(conversations.lastMessageAt, end),
+      ),
+    );
+  const total = active.length;
+  const ia = active.filter((c) => c.status === "ia").length;
+  const handoffs = active.filter((c) => c.status === "novo").length;
+
+  const [leadCount] = await db
+    .select({ c: count() })
+    .from(leads)
+    .where(
+      and(
+        eq(leads.clientId, clientId),
+        gte(leads.createdAt, start),
+        lt(leads.createdAt, end),
+      ),
+    );
+
+  return {
+    conversas: total,
+    leads: leadCount.c,
+    resolvidoPct: total > 0 ? Math.round((ia / total) * 100) : 0,
+    handoffs,
   };
 }
 

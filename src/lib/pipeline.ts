@@ -1,7 +1,9 @@
 import { runHaiku, type HistoryTurn } from "./ai/haiku";
 import type { HaikuOutput } from "./ai/types";
 import { transcribeAudio } from "./groq";
+import { sendHandoffNotification, sendLeadNotification } from "./email";
 import { downloadMedia, getMediaUrl, sendText } from "./whatsapp";
+import type { Client } from "@/db/schema";
 import {
   getClientByPhoneId,
   getOrCreateConversation,
@@ -95,6 +97,10 @@ export async function processInbound(
     confidence: output.confidence,
   });
 
+  // Detecta transição NOVA para handoff (evita avisar de novo se já estava "novo").
+  const newHandoff = output.handoff && convo.status !== "novo";
+  const contactName = convo.contactName ?? msg.contactName ?? null;
+
   // 8. atualiza a conversa (handoff muda status p/ "novo")
   await touchConversation(convo.id, {
     status: output.handoff ? "novo" : "ia",
@@ -102,14 +108,25 @@ export async function processInbound(
   });
 
   // 7. lead
+  let leadCreated = false;
   if (output.lead_detected) {
-    await upsertLead({
+    const r = await upsertLead({
       clientId: client.id,
       conversationId: convo.id,
-      contactName: convo.contactName ?? msg.contactName ?? null,
+      contactName,
       courseInterest: output.course_mentioned,
     });
+    leadCreated = r.created;
   }
+
+  // Notificações por e-mail ao dono (Fase 7). Nunca quebram o pipeline.
+  await notifyOwner(client, {
+    newLead: leadCreated,
+    newHandoff,
+    contactName: contactName ?? "Contato",
+    courseInterest: output.course_mentioned,
+    handoffReason: output.handoff_reason,
+  });
 
   // §6. consumo
   await logUsage({
@@ -121,11 +138,50 @@ export async function processInbound(
     whatsappMessages: 1,
   });
 
-  // 9. envia a resposta ao cliente final
+  // 9. envia a resposta ao cliente final (não quebra o fluxo se a Meta não estiver
+  // conectada — a mensagem já está gravada).
   if (output.reply) {
-    await sendText(msg.phoneNumberId, msg.from, output.reply);
+    try {
+      await sendText(msg.phoneNumberId, msg.from, output.reply);
+    } catch (err) {
+      console.error("[pipeline] envio via WhatsApp falhou:", err);
+    }
   }
 
-  // handoff → notificação ao dono é a Fase 7; aqui o status já mudou.
   return { status: "ok", output };
+}
+
+/** Dispara os avisos por e-mail conforme as preferências do cliente (§4.8). */
+async function notifyOwner(
+  client: Client,
+  ev: {
+    newLead: boolean;
+    newHandoff: boolean;
+    contactName: string;
+    courseInterest: string | null;
+    handoffReason: string | null;
+  },
+): Promise<void> {
+  const to = client.notificationEmail || client.ownerEmail;
+  if (!to) return;
+
+  try {
+    if (ev.newLead && client.notifyNewLead) {
+      await sendLeadNotification(to, {
+        clientName: client.name,
+        contactName: ev.contactName,
+        courseInterest: ev.courseInterest,
+        channel: "organico",
+      });
+    }
+    if (ev.newHandoff && client.notifyHandoff) {
+      await sendHandoffNotification(to, {
+        clientName: client.name,
+        contactName: ev.contactName,
+        reason: ev.handoffReason,
+      });
+    }
+  } catch (err) {
+    console.error("[pipeline] notificação por e-mail falhou:", err);
+  }
 }

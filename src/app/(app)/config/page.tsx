@@ -2,12 +2,7 @@ import { CheckCheck, Phone } from "lucide-react";
 import { getCurrentClient } from "@/lib/current-client";
 import { money } from "@/lib/format";
 import { Header } from "../ui";
-
-const TOGGLES = [
-  { t: "Avisar quando um lead novo chegar", on: true },
-  { t: "Avisar quando a IA encaminhar pra mim", on: true },
-  { t: "Resumo diário por e-mail", on: false },
-];
+import { NotificationsCard } from "./notifications-card";
 
 export default async function ConfigPage() {
   const client = await getCurrentClient();
@@ -54,31 +49,12 @@ export default async function ConfigPage() {
         </div>
 
         {/* Notificações */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-1">
-            Notificações
-          </h3>
-          <p className="text-xs text-slate-400 mb-2">
-            Ativação real na Fase 7 (handoff e avisos).
-          </p>
-          {TOGGLES.map((tg, i) => (
-            <div
-              key={tg.t}
-              className={`flex items-center justify-between py-2.5 ${
-                i < TOGGLES.length - 1 ? "border-b border-slate-50" : ""
-              }`}
-            >
-              <span className="text-sm text-slate-600">{tg.t}</span>
-              <div
-                className={`w-10 h-6 rounded-full flex items-center px-0.5 ${
-                  tg.on ? "bg-emerald-500 justify-end" : "bg-slate-200 justify-start"
-                }`}
-              >
-                <div className="w-5 h-5 rounded-full bg-white" />
-              </div>
-            </div>
-          ))}
-        </div>
+        <NotificationsCard
+          notificationEmail={client.notificationEmail ?? client.ownerEmail ?? ""}
+          notifyNewLead={client.notifyNewLead}
+          notifyHandoff={client.notifyHandoff}
+          notifyDailySummary={client.notifyDailySummary}
+        />
 
         {/* Plano */}
         <div className="bg-white rounded-2xl border border-slate-200 p-5 flex items-center justify-between">

@@ -56,6 +56,13 @@ export const clients = pgTable("clients", {
   plan: planEnum("plan").default("start").notNull(),
   monthlyFee: numeric("monthly_fee", { precision: 10, scale: 2 }),
   status: clientStatusEnum("status").default("active").notNull(),
+  // Notificações (§4.8 / Fase 7) — para onde e quando avisar o dono do negócio.
+  notificationEmail: text("notification_email"),
+  notifyNewLead: boolean("notify_new_lead").default(true).notNull(),
+  notifyHandoff: boolean("notify_handoff").default(true).notNull(),
+  notifyDailySummary: boolean("notify_daily_summary")
+    .default(false)
+    .notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

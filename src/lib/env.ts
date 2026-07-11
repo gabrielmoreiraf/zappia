@@ -41,4 +41,7 @@ export const env = {
     // Sem domínio verificado ainda → remetente de teste do Resend.
     return process.env.EMAIL_FROM || "Zappia <onboarding@resend.dev>";
   },
+  get cronSecret() {
+    return required("CRON_SECRET");
+  },
 };

@@ -8,6 +8,13 @@
       "when": 1783737118513,
       "tag": "0000_ambitious_mojo",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783738825841,
+      "tag": "0001_vengeful_zarda",
+      "breakpoints": true
     }
   ]
 }
