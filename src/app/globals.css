@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+/*
+ * Zappia — identidade visual (fiel ao protótipo docs/Zappia.jsx):
+ * branco, verde-esmeralda (emerald-500 = #10B981), tipografia Plus Jakarta Sans,
+ * cantos arredondados, sem sombras pesadas. Tema claro apenas no v1.
+ */
+@theme inline {
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --color-brand: #10b981; /* emerald-500 */
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: #f1f5f9; /* slate-100 */
+  color: #0f172a; /* slate-900 */
+  font-family: var(--font-sans);
+}
