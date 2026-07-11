@@ -177,9 +177,15 @@ export function Topbar({
         {/* Menu da conta */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 rounded-lg pl-1 pr-2 py-1 hover:bg-slate-50">
-              <Avatar className="size-8">
-                {userImage && <AvatarImage src={userImage} alt={userName} />}
+            <button className="flex items-center gap-2 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200 pl-1 pr-3 py-1 transition-colors">
+              <Avatar className="size-7 shrink-0">
+                {userImage && (
+                  <AvatarImage
+                    src={userImage}
+                    alt={userName}
+                    className="object-cover"
+                  />
+                )}
                 <AvatarFallback className="bg-emerald-500 text-white text-xs font-bold">
                   {initialsOf(userName, userEmail)}
                 </AvatarFallback>

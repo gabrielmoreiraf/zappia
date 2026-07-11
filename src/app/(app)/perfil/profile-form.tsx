@@ -14,21 +14,25 @@ import { PASSWORD_RULES, isPasswordValid } from "@/lib/password";
 import { PLAN_NAME, PLAN_PRICE_LABEL } from "@/lib/plan";
 import { changePassword, saveAvatar, updateProfile } from "../profile-actions";
 
-/** Redimensiona a imagem no navegador e devolve um data URL pequeno (JPEG). */
-function resizeToDataUrl(file: File, max = 256): Promise<string> {
+/**
+ * Recorta a imagem num quadrado centralizado e redimensiona no navegador.
+ * Avatares são sempre círculos — sem isso, fotos não-quadradas (ex.: logos
+ * retangulares) ficam esticadas dentro do círculo.
+ */
+function resizeToDataUrl(file: File, size = 256): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new window.Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
-      const scale = Math.min(1, max / Math.max(img.width, img.height));
-      const w = Math.round(img.width * scale);
-      const h = Math.round(img.height * scale);
+      const side = Math.min(img.width, img.height);
+      const sx = (img.width - side) / 2;
+      const sy = (img.height - side) / 2;
       const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
+      canvas.width = size;
+      canvas.height = size;
       const ctx = canvas.getContext("2d");
       if (!ctx) return reject(new Error("canvas"));
-      ctx.drawImage(img, 0, 0, w, h);
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
       URL.revokeObjectURL(url);
       resolve(canvas.toDataURL("image/jpeg", 0.85));
     };
