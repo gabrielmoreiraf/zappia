@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { isPasswordValid } from "@/lib/password";
 import { createVerificationCode, checkVerificationCode } from "@/lib/verification";
-import { sendVerificationEmail } from "@/lib/email";
+import { sendPasswordResetEmail, sendVerificationEmail } from "@/lib/email";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -96,6 +96,58 @@ export async function verifyEmail(
     not_found: "Nenhum código pendente para esse e-mail.",
   };
   return { ok: false, error: messages[result] };
+}
+
+/** Esqueci a senha: envia um código de redefinição (se a conta existir). */
+export async function requestPasswordReset(
+  email: string,
+): Promise<ActionResult> {
+  const e = email.toLowerCase().trim();
+  if (!EMAIL_RE.test(e)) return { ok: false, error: "E-mail inválido." };
+
+  const [u] = await db.select().from(users).where(eq(users.email, e)).limit(1);
+  // Não revela se o e-mail existe: sempre responde ok.
+  if (u) {
+    try {
+      const code = await createVerificationCode(e);
+      await sendPasswordResetEmail(e, code, u.name);
+    } catch (err) {
+      console.error("[requestPasswordReset] envio falhou:", err);
+      return { ok: false, error: "Falha ao enviar o e-mail. Tente de novo." };
+    }
+  }
+  return { ok: true };
+}
+
+/** Redefine a senha com o código enviado por e-mail. */
+export async function resetPassword(
+  email: string,
+  code: string,
+  password: string,
+  confirm: string,
+): Promise<ActionResult> {
+  const e = email.toLowerCase().trim();
+  if (!isPasswordValid(password))
+    return { ok: false, error: "A senha não atende às regras." };
+  if (password !== confirm)
+    return { ok: false, error: "As senhas não coincidem." };
+
+  const result = await checkVerificationCode(e, code.replace(/\D/g, ""));
+  if (result !== "ok") {
+    const messages: Record<string, string> = {
+      invalid: "Código incorreto.",
+      expired: "Código expirado. Peça um novo.",
+      too_many: "Muitas tentativas. Peça um novo código.",
+      not_found: "Nenhum código pendente para esse e-mail.",
+    };
+    return { ok: false, error: messages[result] };
+  }
+
+  await db
+    .update(users)
+    .set({ passwordHash: bcrypt.hashSync(password, 10) })
+    .where(eq(users.email, e));
+  return { ok: true };
 }
 
 /** Reenvia o código de verificação. */

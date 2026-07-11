@@ -1,5 +1,8 @@
 import { Building2, ChevronRight } from "lucide-react";
+import { redirect } from "next/navigation";
 import { getClientsOverview } from "@/db/agency";
+import { getCurrentUser } from "@/lib/current-user";
+import { isAdminEmail } from "@/lib/roles";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { enterClient } from "../agency-actions";
@@ -7,6 +10,8 @@ import { Header } from "../ui";
 import { NewClientButton } from "./new-client-button";
 
 export default async function ClientesPage() {
+  const user = await getCurrentUser();
+  if (!isAdminEmail(user?.email)) redirect("/dashboard");
   const rows = await getClientsOverview();
 
   return (

@@ -134,7 +134,11 @@ export const users = pgTable("users", {
   name: text("name"),
   passwordHash: text("password_hash").notNull(),
   role: userRoleEnum("role").default("member").notNull(),
-  // Perfil (Fase 8): foto e plano da conta (assinatura do Zappia).
+  // Negócio do usuário-cliente (null para o admin e antes do onboarding).
+  clientId: uuid("client_id").references(() => clients.id, {
+    onDelete: "set null",
+  }),
+  // Perfil: foto e plano da conta (assinatura do Zappia).
   image: text("image"),
   plan: text("plan").default("free").notNull(),
   // null enquanto não confirmou o código de 6 dígitos.

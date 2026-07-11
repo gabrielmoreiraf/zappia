@@ -17,12 +17,13 @@ async function main() {
   const { db } = await import("./index");
   const s = await import("./schema");
 
-  console.log("→ garantindo usuário admin…");
+  // Admin master do Zappia é definido por e-mail (src/lib/roles.ts).
+  console.log("→ garantindo o admin master…");
   await db
     .insert(s.users)
     .values({
-      email: "owner@zappia.app",
-      name: "Owner Zappia",
+      email: "gabrielfmoreira4@gmail.com",
+      name: "Gabriel",
       passwordHash: bcrypt.hashSync("Zappia@123", 10),
       role: "owner",
       emailVerifiedAt: new Date(),
@@ -30,7 +31,7 @@ async function main() {
     .onConflictDoNothing({ target: s.users.email });
 
   console.log("\n✓ Seed concluído (sem mocks de negócio).");
-  console.log("  Admin (login): owner@zappia.app / Zappia@123");
+  console.log("  Admin (login): gabrielfmoreira4@gmail.com / Zappia@123");
 }
 
 main()

@@ -13,6 +13,7 @@ export function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const justVerified = params.get("verified") === "1";
+  const justReset = params.get("reset") === "1";
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -49,6 +50,11 @@ export function LoginForm() {
             E-mail verificado! Faça login pra continuar.
           </div>
         )}
+        {justReset && (
+          <div className="mb-4 text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
+            Senha redefinida! Faça login com a nova senha.
+          </div>
+        )}
         {error && (
           <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
             {error}
@@ -72,6 +78,12 @@ export function LoginForm() {
             {pending ? "Entrando…" : "Entrar"}
           </Button>
         </form>
+
+        <p className="text-xs text-center mt-3">
+          <Link href="/esqueci-senha" className="text-muted-foreground hover:text-slate-700">
+            Esqueci minha senha
+          </Link>
+        </p>
 
         <p className="text-xs text-muted-foreground mt-5 text-center">
           Ainda não tem conta?{" "}

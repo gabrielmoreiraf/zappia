@@ -1,9 +1,14 @@
+import { redirect } from "next/navigation";
 import { getBilling } from "@/db/agency";
+import { getCurrentUser } from "@/lib/current-user";
+import { isAdminEmail } from "@/lib/roles";
 import { money } from "@/lib/format";
 import { Card } from "@/components/ui/card";
 import { Header } from "../ui";
 
 export default async function FaturamentoPage() {
+  const user = await getCurrentUser();
+  if (!isAdminEmail(user?.email)) redirect("/dashboard");
   const b = await getBilling();
 
   const cards = [

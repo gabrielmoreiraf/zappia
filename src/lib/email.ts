@@ -83,6 +83,37 @@ export async function sendVerificationEmail(
   await send(to, `${code} é o seu código de verificação Zappia`, shell(content));
 }
 
+/* ---------- redefinição de senha ---------- */
+
+export async function sendPasswordResetEmail(
+  to: string,
+  code: string,
+  name?: string | null,
+): Promise<void> {
+  const hello = name ? `Olá, ${escapeHtml(name)}!` : "Olá!";
+  const digits = code
+    .split("")
+    .map(
+      (d) =>
+        `<td style="padding:0 5px;"><div style="width:44px;height:56px;line-height:56px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;color:#065f46;font-size:26px;font-weight:800;text-align:center;font-family:'Courier New',monospace;">${d}</div></td>`,
+    )
+    .join("");
+
+  const content = `
+    <tr><td style="padding:16px 32px 4px;">
+      <h1 style="margin:0 0 6px;font-size:20px;color:#0f172a;">${hello}</h1>
+      <p style="margin:0;color:#475569;font-size:14px;line-height:1.6;">Recebemos um pedido para redefinir sua senha. Use o código abaixo (expira em 15 minutos).</p>
+    </td></tr>
+    <tr><td align="center" style="padding:24px 32px;">
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr>${digits}</tr></table>
+    </td></tr>
+    <tr><td style="padding:0 32px 28px;">
+      <p style="margin:0;color:#94a3b8;font-size:12px;line-height:1.6;">Se você não pediu isso, ignore este e-mail — sua senha continua a mesma.</p>
+    </td></tr>`;
+
+  await send(to, `${code} — redefinir sua senha Zappia`, shell(content));
+}
+
 /* ---------- notificações (Fase 7) ---------- */
 
 function infoRow(label: string, value: string): string {

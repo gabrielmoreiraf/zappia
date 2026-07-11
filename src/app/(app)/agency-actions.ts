@@ -3,12 +3,22 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/auth";
 import { db } from "@/db";
 import { clients } from "@/db/schema";
 import { ACTIVE_CLIENT_COOKIE } from "@/lib/current-client";
+import { isAdminEmail } from "@/lib/roles";
+
+async function requireAdmin() {
+  const session = await auth();
+  if (!isAdminEmail(session?.user?.email)) {
+    throw new Error("Não autorizado.");
+  }
+}
 
 /** Agência "entra como" um cliente: fixa o client ativo e vai pro painel dele. */
 export async function enterClient(clientId: string) {
+  await requireAdmin();
   const jar = await cookies();
   jar.set(ACTIVE_CLIENT_COOKIE, clientId, {
     httpOnly: true,
@@ -21,6 +31,7 @@ export async function enterClient(clientId: string) {
 
 /** Sai do contexto do cliente e volta pra visão da agência. */
 export async function exitClient() {
+  await requireAdmin();
   const jar = await cookies();
   jar.delete(ACTIVE_CLIENT_COOKIE);
   redirect("/clientes");
@@ -28,6 +39,7 @@ export async function exitClient() {
 
 /** Cria um novo client (versão simples; o wizard de WhatsApp vem na fase Meta). */
 export async function createClient(formData: FormData) {
+  await requireAdmin();
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return;
 
