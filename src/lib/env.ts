@@ -44,8 +44,4 @@ export const env = {
   get cronSecret() {
     return required("CRON_SECRET");
   },
-  get blobToken() {
-    // Vercel Blob (upload de foto de perfil). Vazio = upload desabilitado.
-    return process.env.BLOB_READ_WRITE_TOKEN || "";
-  },
 };

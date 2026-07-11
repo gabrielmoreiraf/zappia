@@ -18,7 +18,30 @@ import {
 } from "@/components/ui/select";
 import { PasswordInput } from "@/components/password-input";
 import { PASSWORD_RULES, isPasswordValid } from "@/lib/password";
-import { changePassword, updateProfile, uploadAvatar } from "../profile-actions";
+import { changePassword, saveAvatar, updateProfile } from "../profile-actions";
+
+/** Redimensiona a imagem no navegador e devolve um data URL pequeno (JPEG). */
+function resizeToDataUrl(file: File, max = 256): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("canvas"));
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/jpeg", 0.85));
+    };
+    img.onerror = () => reject(new Error("imagem inválida"));
+    img.src = url;
+  });
+}
 
 function initials(name: string, email: string) {
   const base = name || email;
@@ -54,17 +77,25 @@ export function ProfileForm({
 
   function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    const fd = new FormData();
-    fd.set("file", file);
+    if (!file.type.startsWith("image/")) {
+      toast.error("Envie uma imagem.");
+      return;
+    }
     start(async () => {
-      const res = await uploadAvatar(fd);
-      if (res.ok && res.url) {
-        setImage(res.url);
-        toast.success("Foto atualizada!");
-        router.refresh();
-      } else {
-        toast.error(res.error ?? "Falha no upload.");
+      try {
+        const dataUrl = await resizeToDataUrl(file);
+        const res = await saveAvatar(dataUrl);
+        if (res.ok) {
+          setImage(dataUrl);
+          toast.success("Foto atualizada!");
+          router.refresh();
+        } else {
+          toast.error(res.error ?? "Falha ao salvar a foto.");
+        }
+      } catch {
+        toast.error("Não consegui processar a imagem.");
       }
     });
   }

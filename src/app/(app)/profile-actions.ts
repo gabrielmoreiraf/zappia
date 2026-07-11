@@ -3,12 +3,10 @@
 import bcrypt from "bcryptjs";
 import { and, eq, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { put } from "@vercel/blob";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { isPasswordValid } from "@/lib/password";
-import { env } from "@/lib/env";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -76,40 +74,23 @@ export async function changePassword(
   return { ok: true };
 }
 
-/** Upload da foto de perfil (Vercel Blob). Retorna a URL salva. */
-export async function uploadAvatar(
-  formData: FormData,
-): Promise<ActionResult & { url?: string }> {
+/**
+ * Salva a foto de perfil. A imagem já vem redimensionada e como data URL do
+ * navegador — guardamos direto (funciona em qualquer ambiente, sem storage externo).
+ */
+export async function saveAvatar(dataUrl: string): Promise<ActionResult> {
   const id = await currentUserId();
   if (!id) return { ok: false, error: "Sessão expirada." };
-  if (!env.blobToken) {
-    return {
-      ok: false,
-      error:
-        "Upload de foto não configurado. Crie um Blob store na Vercel e defina BLOB_READ_WRITE_TOKEN.",
-    };
+
+  if (!/^data:image\/(png|jpe?g|webp);base64,/.test(dataUrl)) {
+    return { ok: false, error: "Imagem inválida." };
+  }
+  // Depois do resize a imagem é pequena; ~300KB de margem.
+  if (dataUrl.length > 400_000) {
+    return { ok: false, error: "Imagem muito grande. Tente outra." };
   }
 
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, error: "Arquivo inválido." };
-  }
-  if (!file.type.startsWith("image/")) {
-    return { ok: false, error: "Envie uma imagem." };
-  }
-
-  try {
-    const ext = file.name.split(".").pop() || "png";
-    const blob = await put(`avatars/${id}.${ext}`, file, {
-      access: "public",
-      token: env.blobToken,
-      allowOverwrite: true,
-    });
-    await db.update(users).set({ image: blob.url }).where(eq(users.id, id));
-    revalidatePath("/perfil");
-    return { ok: true, url: blob.url };
-  } catch (err) {
-    console.error("[uploadAvatar]", err);
-    return { ok: false, error: "Falha no upload da foto." };
-  }
+  await db.update(users).set({ image: dataUrl }).where(eq(users.id, id));
+  revalidatePath("/perfil");
+  return { ok: true };
 }

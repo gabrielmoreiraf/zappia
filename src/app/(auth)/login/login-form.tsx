@@ -32,7 +32,7 @@ export function LoginForm() {
       if (res?.error) {
         setError("E-mail ou senha incorretos, ou conta não verificada.");
       } else {
-        router.push("/");
+        router.push("/dashboard");
         router.refresh();
       }
     });
