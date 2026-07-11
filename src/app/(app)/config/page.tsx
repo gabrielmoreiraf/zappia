@@ -1,7 +1,7 @@
 import { CheckCheck, Phone } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getCurrentClient } from "@/lib/current-client";
-import { money } from "@/lib/format";
+import { PLAN_NAME, PLAN_PRICE_LABEL } from "@/lib/plan";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Header } from "../ui";
@@ -64,10 +64,10 @@ export default async function ConfigPage() {
           <CardContent className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-semibold text-slate-700">
-                Plano {client.plan === "pro" ? "Pro" : "Start"}
+                Plano {PLAN_NAME}
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                {money(client.monthlyFee)}/mês
+                {PLAN_PRICE_LABEL}/mês
               </p>
             </div>
             <Badge variant="secondary" className="bg-emerald-50 text-emerald-700">

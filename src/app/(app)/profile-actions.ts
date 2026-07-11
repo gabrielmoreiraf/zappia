@@ -29,7 +29,6 @@ export async function updateProfile(formData: FormData): Promise<ActionResult> {
   const email = String(formData.get("email") ?? "")
     .toLowerCase()
     .trim();
-  const plan = String(formData.get("plan") ?? "free") === "pro" ? "pro" : "free";
 
   if (!name) return { ok: false, error: "Informe seu nome." };
   if (!EMAIL_RE.test(email)) return { ok: false, error: "E-mail inválido." };
@@ -42,7 +41,7 @@ export async function updateProfile(formData: FormData): Promise<ActionResult> {
     .limit(1);
   if (dup) return { ok: false, error: "Esse e-mail já está em uso." };
 
-  await db.update(users).set({ name, email, plan }).where(eq(users.id, id));
+  await db.update(users).set({ name, email }).where(eq(users.id, id));
   revalidatePath("/perfil");
   return { ok: true };
 }

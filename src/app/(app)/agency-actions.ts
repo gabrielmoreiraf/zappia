@@ -8,6 +8,7 @@ import { db } from "@/db";
 import { clients } from "@/db/schema";
 import { ACTIVE_CLIENT_COOKIE } from "@/lib/current-client";
 import { isAdminEmail } from "@/lib/roles";
+import { PLAN_PRICE } from "@/lib/plan";
 
 async function requireAdmin() {
   const session = await auth();
@@ -48,8 +49,6 @@ export async function createClient(formData: FormData) {
   ).trim();
   const assistantName =
     String(formData.get("assistantName") ?? "").trim() || "Atendimento";
-  const plan = String(formData.get("plan") ?? "start") === "pro" ? "pro" : "start";
-  const monthlyFee = String(formData.get("monthlyFee") ?? "0").replace(",", ".");
 
   await db.insert(clients).values({
     name,
@@ -59,8 +58,8 @@ export async function createClient(formData: FormData) {
     welcomeMessage: "Olá! 👋 Como posso te ajudar?",
     handoffTriggers: ["preço", "quero falar com atendente", "reclamação"],
     knowledgeBase: "",
-    plan,
-    monthlyFee: monthlyFee || "0",
+    plan: "pro",
+    monthlyFee: PLAN_PRICE,
     status: "active",
   });
 

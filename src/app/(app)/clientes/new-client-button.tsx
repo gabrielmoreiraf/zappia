@@ -12,25 +12,17 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { PLAN_NAME, PLAN_PRICE_LABEL } from "@/lib/plan";
 import { createClient } from "../agency-actions";
 
 export function NewClientButton() {
   const [open, setOpen] = useState(false);
-  const [plan, setPlan] = useState("start");
   const [pending, start] = useTransition();
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    fd.set("plan", plan);
     start(async () => {
       await createClient(fd);
       setOpen(false);
@@ -66,28 +58,11 @@ export function NewClientButton() {
             <Label htmlFor="assistantName">Nome do assistente</Label>
             <Input id="assistantName" name="assistantName" placeholder="Atendimento" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-2">
-              <Label>Plano</Label>
-              <Select value={plan} onValueChange={setPlan}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="start">Start</SelectItem>
-                  <SelectItem value="pro">Pro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="monthlyFee">Mensalidade (R$)</Label>
-              <Input
-                id="monthlyFee"
-                name="monthlyFee"
-                inputMode="decimal"
-                placeholder="250"
-              />
-            </div>
+          <div className="rounded-xl bg-slate-50 border border-slate-100 px-3.5 py-2.5 flex items-center justify-between">
+            <span className="text-sm text-slate-600">Plano {PLAN_NAME}</span>
+            <span className="text-sm font-medium text-slate-700">
+              {PLAN_PRICE_LABEL}/mês
+            </span>
           </div>
           <p className="text-xs text-muted-foreground">
             A conexão do WhatsApp e a base de conhecimento são configuradas depois,

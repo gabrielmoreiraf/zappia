@@ -21,6 +21,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { PLAN_FEATURES, PLAN_NAME, PLAN_PRICE_LABEL } from "@/lib/plan";
 
 const FEATURES = [
   {
@@ -74,31 +75,6 @@ const WITH = [
   "Todo lead capturado e organizado",
   "Equipe focada no que importa",
   "Nunca inventa informação",
-];
-
-const PLANS = [
-  {
-    name: "Start",
-    price: "149",
-    featured: false,
-    features: [
-      "Atendimento com IA (texto e áudio)",
-      "Painel de conversas e leads",
-      "Base de conhecimento",
-      "1 número de WhatsApp",
-    ],
-  },
-  {
-    name: "Pro",
-    price: "249",
-    featured: true,
-    features: [
-      "Tudo do Start",
-      "Notificações de lead e handoff",
-      "Resumo diário por e-mail",
-      "Suporte prioritário",
-    ],
-  },
 ];
 
 const FAQ = [
@@ -280,40 +256,28 @@ export default async function LandingPage() {
       <section id="precos" className="bg-slate-50 border-y border-slate-100">
         <div className="mx-auto max-w-4xl px-4 py-20">
           <div className="text-center max-w-2xl mx-auto mb-12">
-            <h2 className="text-3xl font-bold">Planos e preços</h2>
-            <p className="mt-3 text-slate-600">Escolha o plano do seu momento. Cancele quando quiser.</p>
+            <h2 className="text-3xl font-bold">Preço simples, sem surpresa</h2>
+            <p className="mt-3 text-slate-600">
+              Um único plano com tudo incluído. Cancele quando quiser.
+            </p>
           </div>
-          <div className="grid gap-5 sm:grid-cols-2 max-w-2xl mx-auto">
-            {PLANS.map((p) => (
-              <Card
-                key={p.name}
-                className={`p-6 gap-0 relative ${
-                  p.featured ? "border-emerald-500 border-2 shadow-md" : ""
-                }`}
-              >
-                {p.featured && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-semibold text-white bg-emerald-500 px-3 py-1 rounded-full">
-                    Recomendado
-                  </span>
-                )}
-                <h3 className="font-bold text-lg">{p.name}</h3>
-                <div className="mt-3 mb-4">
-                  <span className="text-3xl font-extrabold">R$ {p.price}</span>
-                  <span className="text-sm text-slate-500">/mês</span>
-                </div>
-                <ul className="space-y-2 mb-6">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-sm text-slate-600">
-                      <Check size={15} className="text-emerald-500 mt-0.5 shrink-0" /> {f}
-                    </li>
-                  ))}
-                </ul>
-                <Button asChild variant={p.featured ? "default" : "outline"} className="w-full mt-auto">
-                  <Link href="/cadastro">Começar</Link>
-                </Button>
-              </Card>
-            ))}
-          </div>
+          <Card className="p-8 gap-0 max-w-md mx-auto border-emerald-500 border-2 shadow-md">
+            <h3 className="font-bold text-lg">Plano {PLAN_NAME}</h3>
+            <div className="mt-3 mb-5">
+              <span className="text-4xl font-extrabold">{PLAN_PRICE_LABEL}</span>
+              <span className="text-sm text-slate-500">/mês</span>
+            </div>
+            <ul className="space-y-2.5 mb-7">
+              {PLAN_FEATURES.map((f) => (
+                <li key={f} className="flex items-start gap-2 text-sm text-slate-600">
+                  <Check size={16} className="text-emerald-500 mt-0.5 shrink-0" /> {f}
+                </li>
+              ))}
+            </ul>
+            <Button asChild size="lg" className="w-full">
+              <Link href="/cadastro">Começar agora</Link>
+            </Button>
+          </Card>
         </div>
       </section>
 

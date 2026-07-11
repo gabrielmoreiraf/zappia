@@ -9,15 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { PasswordInput } from "@/components/password-input";
 import { PASSWORD_RULES, isPasswordValid } from "@/lib/password";
+import { PLAN_NAME, PLAN_PRICE_LABEL } from "@/lib/plan";
 import { changePassword, saveAvatar, updateProfile } from "../profile-actions";
 
 /** Redimensiona a imagem no navegador e devolve um data URL pequeno (JPEG). */
@@ -65,7 +59,6 @@ export function ProfileForm({
 }) {
   const router = useRouter();
   const [image, setImage] = useState(user.image);
-  const [plan, setPlan] = useState(user.plan);
   const [pending, start] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -103,7 +96,6 @@ export function ProfileForm({
   function saveInfo(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    fd.set("plan", plan);
     start(async () => {
       const res = await updateProfile(fd);
       if (res.ok) {
@@ -187,17 +179,17 @@ export function ProfileForm({
             </div>
             <div className="grid gap-2">
               <Label>Plano</Label>
-              <Select value={plan} onValueChange={setPlan}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="free">Free</SelectItem>
-                  <SelectItem value="pro">Pro</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3.5 py-2.5">
+                <span className="text-sm font-medium text-slate-700">
+                  Plano {PLAN_NAME}
+                </span>
+                <span className="text-sm text-slate-500">
+                  {PLAN_PRICE_LABEL}/mês
+                </span>
+              </div>
               <p className="text-xs text-muted-foreground">
-                Cobrança automática entra numa fase futura.
+                Plano único com tudo incluído. Cobrança automática entra numa fase
+                futura.
               </p>
             </div>
             <Button type="submit" disabled={pending}>

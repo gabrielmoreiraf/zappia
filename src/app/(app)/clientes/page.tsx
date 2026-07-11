@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { getClientsOverview } from "@/db/agency";
 import { getCurrentUser } from "@/lib/current-user";
 import { isAdminEmail } from "@/lib/roles";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { enterClient } from "../agency-actions";
 import { Header } from "../ui";
@@ -51,9 +50,6 @@ export default async function ClientesPage() {
                   </div>
                   <div className="text-[10px] text-slate-400">conversas</div>
                 </div>
-                <Badge variant="secondary">
-                  {c.plan === "pro" ? "Pro" : "Start"}
-                </Badge>
                 <span
                   className={`w-2.5 h-2.5 rounded-full ${
                     c.health === "ok" ? "bg-emerald-500" : "bg-amber-400"

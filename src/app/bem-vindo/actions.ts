@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { clients, users } from "@/db/schema";
 import { isAdminEmail } from "@/lib/roles";
+import { PLAN_PRICE } from "@/lib/plan";
 
 export interface ActionResult {
   ok: boolean;
@@ -55,8 +56,8 @@ export async function createOwnBusiness(
       welcomeMessage: "Olá! 👋 Como posso te ajudar?",
       handoffTriggers: ["preço", "quero falar com atendente", "reclamação"],
       knowledgeBase: "",
-      plan: "start",
-      monthlyFee: "0",
+      plan: "pro",
+      monthlyFee: PLAN_PRICE,
       status: "active",
       notificationEmail: email ?? null,
     })
