@@ -1,11 +1,9 @@
 import { redirect } from "next/navigation";
 import { getCurrentClient } from "@/lib/current-client";
-import { PLAN_NAME, PLAN_PRICE_LABEL } from "@/lib/plan";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Header } from "../ui";
 import { WhatsAppConnectionCard } from "./connect-whatsapp-button";
 import { NotificationsCard } from "./notifications-card";
+import { PlanCard } from "./plan-card";
 
 export default async function ConfigPage() {
   const client = await getCurrentClient();
@@ -20,21 +18,7 @@ export default async function ConfigPage() {
       <WhatsAppConnectionCard connected={connected} number={client.whatsappNumber} />
 
       <div className="grid gap-4 lg:grid-cols-2 items-start">
-        <Card>
-          <CardContent className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-slate-700">
-                Plano {PLAN_NAME}
-              </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                {PLAN_PRICE_LABEL}/mês
-              </p>
-            </div>
-            <Badge variant="secondary" className="bg-emerald-50 text-emerald-700">
-              Gerenciar
-            </Badge>
-          </CardContent>
-        </Card>
+        <PlanCard />
 
         <NotificationsCard
           notificationEmail={client.notificationEmail ?? client.ownerEmail ?? ""}
