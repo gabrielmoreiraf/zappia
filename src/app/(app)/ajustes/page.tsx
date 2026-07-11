@@ -1,11 +1,11 @@
 import { getCurrentClient } from "@/lib/current-client";
+import { redirect } from "next/navigation";
 import { Header } from "../ui";
-import { NoClient } from "../no-client";
 import { AjustesForm } from "./ajustes-form";
 
 export default async function AjustesPage() {
   const client = await getCurrentClient();
-  if (!client) return <NoClient />;
+  if (!client) redirect("/clientes");
   return (
     <div>
       <Header

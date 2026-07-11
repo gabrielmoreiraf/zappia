@@ -2,6 +2,7 @@ import { Bell, Search } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Toaster } from "@/components/ui/sonner";
 import { getCurrentUser } from "@/lib/current-user";
+import { getCurrentClient } from "@/lib/current-client";
 import { MobileNav, Sidebar } from "./nav";
 
 // O painel reflete dados ao vivo do banco — nada de HTML estático em cache.
@@ -15,6 +16,10 @@ export default async function AppLayout({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
+  // Papéis owner/member são da agência (admin). Cliente-login virá depois.
+  const isAdmin = user.role === "owner" || user.role === "member";
+  const client = await getCurrentClient();
+
   return (
     <div className="flex min-h-screen bg-slate-100">
       <Toaster position="top-center" richColors />
@@ -22,6 +27,8 @@ export default async function AppLayout({
         userName={user.name ?? ""}
         userEmail={user.email}
         userImage={user.image}
+        isAdmin={isAdmin}
+        activeClientName={client?.name ?? null}
       />
 
       <div className="flex-1 min-w-0 flex flex-col">
@@ -42,7 +49,7 @@ export default async function AppLayout({
         <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-6">{children}</main>
       </div>
 
-      <MobileNav />
+      <MobileNav isAdmin={isAdmin} hasActiveClient={!!client} />
     </div>
   );
 }

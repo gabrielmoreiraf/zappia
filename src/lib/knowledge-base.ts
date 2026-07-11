@@ -70,35 +70,27 @@ export function serializeKnowledgeBase(courses: Course[]): string {
     .join("\n\n");
 }
 
-/** Agrupa os cursos por categoria, na ordem/cor do protótipo (§4.6). */
-const GROUP_ORDER: { match: (cat: string) => boolean; label: string; cor: string }[] =
-  [
-    { match: (c) => /presencial/i.test(c), label: "Presenciais", cor: "emerald" },
-    { match: (c) => /técnico|tecnico/i.test(c), label: "Técnicos", cor: "teal" },
-    { match: (c) => /ead/i.test(c), label: "EAD", cor: "sky" },
-    { match: (c) => /informática|informatica/i.test(c), label: "Informática", cor: "amber" },
-  ];
-
 export interface CourseGroup {
   label: string;
   cor: string;
   itens: Course[];
 }
 
-export function groupCourses(courses: Course[]): CourseGroup[] {
-  const groups: CourseGroup[] = GROUP_ORDER.map((g) => ({
-    label: g.label,
-    cor: g.cor,
-    itens: [],
-  }));
-  const outros: CourseGroup = { label: "Outros", cor: "slate", itens: [] };
+// Cores rotativas — categorias são livres (qualquer segmento), não fixas.
+const GROUP_COLORS = ["emerald", "teal", "sky", "amber", "violet", "slate"];
 
+/** Agrupa os itens pela categoria informada pelo cliente, na ordem de aparição. */
+export function groupCourses(courses: Course[]): CourseGroup[] {
+  const map = new Map<string, Course[]>();
   for (const c of courses) {
-    const idx = GROUP_ORDER.findIndex((g) => g.match(c.categoria));
-    if (idx >= 0) groups[idx].itens.push(c);
-    else outros.itens.push(c);
+    const key = c.categoria?.trim() || "Geral";
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(c);
   }
-  const result = groups.filter((g) => g.itens.length > 0);
-  if (outros.itens.length) result.push(outros);
-  return result;
+  let i = 0;
+  return Array.from(map.entries()).map(([label, itens]) => ({
+    label,
+    cor: GROUP_COLORS[i++ % GROUP_COLORS.length],
+    itens,
+  }));
 }

@@ -6,23 +6,20 @@ import { clients, type Client } from "@/db/schema";
 export const ACTIVE_CLIENT_COOKIE = "active_client";
 
 /**
- * Cliente "ativo" do painel, ou null se a conta ainda não tem nenhum cliente.
+ * Cliente "ativo" do painel, ou null quando a agência não entrou em nenhum.
  *
- * A agência escolhe qual client está vendo (cookie `active_client`, setado ao
- * "Entrar" na tela de Clientes). Sem seleção, cai no primeiro client existente.
+ * O painel do cliente só aparece quando a agência "entra" num cliente (cookie
+ * `active_client`, setado na tela de Clientes). Sem isso, fica na visão da agência.
  */
 export async function getCurrentClient(): Promise<Client | null> {
   const jar = await cookies();
   const activeId = jar.get(ACTIVE_CLIENT_COOKIE)?.value;
-  if (activeId) {
-    const [c] = await db
-      .select()
-      .from(clients)
-      .where(eq(clients.id, activeId))
-      .limit(1);
-    if (c) return c;
-  }
+  if (!activeId) return null;
 
-  const [first] = await db.select().from(clients).orderBy(clients.createdAt).limit(1);
-  return first ?? null;
+  const [c] = await db
+    .select()
+    .from(clients)
+    .where(eq(clients.id, activeId))
+    .limit(1);
+  return c ?? null;
 }

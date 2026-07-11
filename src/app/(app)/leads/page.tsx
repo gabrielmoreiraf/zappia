@@ -3,8 +3,8 @@ import { Download, Filter } from "lucide-react";
 import { getCurrentClient } from "@/lib/current-client";
 import { getLeads } from "@/db/panel";
 import { dayLabel, initials } from "@/lib/format";
+import { redirect } from "next/navigation";
 import { Header } from "../ui";
-import { NoClient } from "../no-client";
 import { LeadStatusSelect } from "./lead-status-select";
 
 const FILTERS = [
@@ -26,7 +26,7 @@ export default async function LeadsPage({
 }) {
   const { st } = await searchParams;
   const client = await getCurrentClient();
-  if (!client) return <NoClient />;
+  if (!client) redirect("/clientes");
   const status =
     st === "novo" || st === "contato" || st === "matriculado" ? st : undefined;
   const rows = await getLeads(client.id, status);

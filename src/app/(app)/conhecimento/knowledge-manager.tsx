@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 import { deleteCourse, toggleCourse, upsertCourse } from "../actions";
 import { groupCourses, type Course } from "@/lib/knowledge-base";
@@ -10,27 +10,30 @@ const DOT: Record<string, string> = {
   teal: "bg-teal-500",
   sky: "bg-sky-500",
   amber: "bg-amber-500",
+  violet: "bg-violet-500",
   slate: "bg-slate-400",
 };
-
-const CATEGORIAS = ["Presencial", "Técnico", "EAD", "Informática"];
 
 const EMPTY: Course = {
   nome: "",
   status: "confirmar_com_equipe",
-  categoria: "Presencial",
+  categoria: "",
   ativo: true,
 };
 
-export function CoursesManager({ courses }: { courses: Course[] }) {
+export function KnowledgeManager({ courses }: { courses: Course[] }) {
   const groups = groupCourses(courses);
+  const categorias = useMemo(
+    () => Array.from(new Set(courses.map((c) => c.categoria).filter(Boolean))),
+    [courses],
+  );
   const [pending, start] = useTransition();
   const [editing, setEditing] = useState<{ course: Course; isNew: boolean } | null>(
     null,
   );
 
-  function courseInfo(c: Course): string {
-    const parts = [c.categoria];
+  function info(c: Course): string {
+    const parts = [c.categoria || "Geral"];
     if (c.status === "confirmado" && c.valor) parts.push(c.valor);
     if (c.observacao) parts.push(c.observacao);
     return parts.join(" · ");
@@ -51,12 +54,12 @@ export function CoursesManager({ courses }: { courses: Course[] }) {
         onClick={() => setEditing({ course: { ...EMPTY }, isNew: true })}
         className="text-sm font-medium px-3 py-2 rounded-xl bg-emerald-500 text-white flex items-center gap-1.5 mb-5"
       >
-        <Plus size={16} /> Adicionar curso
+        <Plus size={16} /> Adicionar item
       </button>
 
       {groups.length === 0 && (
         <p className="text-sm text-slate-400">
-          Nenhum curso cadastrado. Clique em “Adicionar curso”.
+          Nenhum item cadastrado. Clique em “Adicionar item”.
         </p>
       )}
 
@@ -80,7 +83,7 @@ export function CoursesManager({ courses }: { courses: Course[] }) {
                       {c.nome}
                     </div>
                     <div className="text-xs text-slate-400 truncate">
-                      {courseInfo(c)}
+                      {info(c)}
                     </div>
                   </div>
                   <button
@@ -114,7 +117,7 @@ export function CoursesManager({ courses }: { courses: Course[] }) {
           <div className="bg-white w-full md:max-w-md rounded-t-2xl md:rounded-2xl p-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-slate-900">
-                {editing.isNew ? "Adicionar curso" : "Editar curso"}
+                {editing.isNew ? "Adicionar item" : "Editar item"}
               </h3>
               <button onClick={() => setEditing(null)} aria-label="Fechar">
                 <X size={20} className="text-slate-400" />
@@ -131,22 +134,24 @@ export function CoursesManager({ courses }: { courses: Course[] }) {
                   name="nome"
                   required
                   defaultValue={editing.course.nome}
+                  placeholder="Ex.: Cimento CP-II 50kg"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm outline-none"
                 />
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Categoria">
-                  <select
+                  <input
                     name="categoria"
+                    list="categorias"
                     defaultValue={editing.course.categoria}
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm outline-none bg-white"
-                  >
-                    {CATEGORIAS.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
+                    placeholder="Ex.: Materiais"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm outline-none"
+                  />
+                  <datalist id="categorias">
+                    {categorias.map((c) => (
+                      <option key={c} value={c} />
                     ))}
-                  </select>
+                  </datalist>
                 </Field>
                 <Field label="Status">
                   <select
@@ -160,19 +165,19 @@ export function CoursesManager({ courses }: { courses: Course[] }) {
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Valor (só se confirmado)">
+                <Field label="Preço (só se confirmado)">
                   <input
                     name="valor"
                     defaultValue={editing.course.valor ?? ""}
-                    placeholder="R$ 450"
+                    placeholder="R$ 39,90"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm outline-none"
                   />
                 </Field>
-                <Field label="Carga horária">
+                <Field label="Detalhe">
                   <input
                     name="cargaHoraria"
                     defaultValue={editing.course.cargaHoraria ?? ""}
-                    placeholder="40h"
+                    placeholder="Ex.: em estoque"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm outline-none"
                   />
                 </Field>
@@ -181,7 +186,7 @@ export function CoursesManager({ courses }: { courses: Course[] }) {
                 <input
                   name="observacao"
                   defaultValue={editing.course.observacao ?? ""}
-                  placeholder="vagas limitadas"
+                  placeholder="entrega em 24h"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm outline-none"
                 />
               </Field>

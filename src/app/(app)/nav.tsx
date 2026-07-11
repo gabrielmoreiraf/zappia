@@ -14,45 +14,25 @@ import {
   LogOut,
   Building2,
   Wallet,
+  ChevronLeft,
   type LucideIcon,
 } from "lucide-react";
+import { exitClient } from "./agency-actions";
 
-const SIDEBAR: { g: string; items: { href: string; label: string; icon: LucideIcon }[] }[] =
-  [
-    {
-      g: "Operação",
-      items: [
-        { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-        { href: "/conversas", label: "Conversas", icon: MessageSquare },
-        { href: "/leads", label: "Leads", icon: Users },
-      ],
-    },
-    {
-      g: "IA",
-      items: [
-        { href: "/cursos", label: "Base de cursos", icon: BookOpen },
-        { href: "/ajustes", label: "Ajustes da IA", icon: SlidersHorizontal },
-      ],
-    },
-    {
-      g: "Conta",
-      items: [{ href: "/config", label: "Configurações", icon: Settings }],
-    },
-    {
-      g: "Agência",
-      items: [
-        { href: "/clientes", label: "Clientes", icon: Building2 },
-        { href: "/faturamento", label: "Faturamento", icon: Wallet },
-      ],
-    },
-  ];
+type Item = { href: string; label: string; icon: LucideIcon };
 
-const MOBILE: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/dashboard", label: "Início", icon: LayoutDashboard },
+const CLIENT_ITEMS: Item[] = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/conversas", label: "Conversas", icon: MessageSquare },
   { href: "/leads", label: "Leads", icon: Users },
-  { href: "/cursos", label: "Cursos", icon: BookOpen },
-  { href: "/config", label: "Ajustes", icon: Settings },
+  { href: "/conhecimento", label: "Base de conhecimento", icon: BookOpen },
+  { href: "/ajustes", label: "Ajustes da IA", icon: SlidersHorizontal },
+  { href: "/config", label: "Configurações", icon: Settings },
+];
+
+const AGENCY_ITEMS: Item[] = [
+  { href: "/clientes", label: "Clientes", icon: Building2 },
+  { href: "/faturamento", label: "Faturamento", icon: Wallet },
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -70,14 +50,33 @@ function Logo() {
   );
 }
 
+function NavLink({ item, pathname }: { item: Item; pathname: string }) {
+  const Ic = item.icon;
+  const on = isActive(pathname, item.href);
+  return (
+    <Link
+      href={item.href}
+      className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium mb-0.5 ${
+        on ? "bg-emerald-50 text-emerald-700" : "text-slate-600 hover:bg-slate-50"
+      }`}
+    >
+      <Ic size={17} /> {item.label}
+    </Link>
+  );
+}
+
 export function Sidebar({
   userName,
   userEmail,
   userImage,
+  isAdmin,
+  activeClientName,
 }: {
   userName: string;
   userEmail: string;
   userImage?: string | null;
+  isAdmin: boolean;
+  activeClientName: string | null;
 }) {
   const pathname = usePathname();
   return (
@@ -85,32 +84,46 @@ export function Sidebar({
       <div className="px-2 py-2 mb-2">
         <Logo />
       </div>
+
       <nav className="flex-1 space-y-4 overflow-y-auto">
-        {SIDEBAR.map((sec) => (
-          <div key={sec.g}>
-            <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide px-2 mb-1">
-              {sec.g}
+        {/* Painel do cliente ativo */}
+        {activeClientName && (
+          <div>
+            <div className="flex items-center justify-between px-2 mb-1">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide truncate">
+                {activeClientName}
+              </span>
+              {isAdmin && (
+                <form action={exitClient}>
+                  <button
+                    type="submit"
+                    title="Voltar para a agência"
+                    className="text-slate-400 hover:text-emerald-600 flex items-center"
+                  >
+                    <ChevronLeft size={15} />
+                  </button>
+                </form>
+              )}
             </div>
-            {sec.items.map((it) => {
-              const Ic = it.icon;
-              const on = isActive(pathname, it.href);
-              return (
-                <Link
-                  key={it.href}
-                  href={it.href}
-                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium mb-0.5 ${
-                    on
-                      ? "bg-emerald-50 text-emerald-700"
-                      : "text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  <Ic size={17} /> {it.label}
-                </Link>
-              );
-            })}
+            {CLIENT_ITEMS.map((it) => (
+              <NavLink key={it.href} item={it} pathname={pathname} />
+            ))}
           </div>
-        ))}
+        )}
+
+        {/* Agência (só admin) */}
+        {isAdmin && (
+          <div>
+            <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide px-2 mb-1">
+              Agência
+            </div>
+            {AGENCY_ITEMS.map((it) => (
+              <NavLink key={it.href} item={it} pathname={pathname} />
+            ))}
+          </div>
+        )}
       </nav>
+
       <div className="mt-3 flex items-center gap-2.5 p-2.5 rounded-xl bg-slate-50">
         <Link
           href="/perfil"
@@ -149,11 +162,35 @@ export function Sidebar({
   );
 }
 
-export function MobileNav() {
+export function MobileNav({
+  isAdmin,
+  hasActiveClient,
+}: {
+  isAdmin: boolean;
+  hasActiveClient: boolean;
+}) {
   const pathname = usePathname();
+  const items: Item[] = hasActiveClient
+    ? [
+        { href: "/dashboard", label: "Início", icon: LayoutDashboard },
+        { href: "/conversas", label: "Conversas", icon: MessageSquare },
+        { href: "/leads", label: "Leads", icon: Users },
+        { href: "/conhecimento", label: "Base", icon: BookOpen },
+        { href: "/config", label: "Config", icon: Settings },
+      ]
+    : isAdmin
+      ? [
+          { href: "/clientes", label: "Clientes", icon: Building2 },
+          { href: "/faturamento", label: "Faturamento", icon: Wallet },
+          { href: "/perfil", label: "Perfil", icon: Users },
+        ]
+      : [];
+
+  if (items.length === 0) return null;
+
   return (
     <div className="md:hidden fixed bottom-0 inset-x-0 z-20 bg-white border-t border-slate-200 flex justify-around px-1 py-1.5">
-      {MOBILE.map((t) => {
+      {items.map((t) => {
         const Ic = t.icon;
         const on = isActive(pathname, t.href);
         return (

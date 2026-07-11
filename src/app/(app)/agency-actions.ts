@@ -19,6 +19,13 @@ export async function enterClient(clientId: string) {
   redirect("/dashboard");
 }
 
+/** Sai do contexto do cliente e volta pra visão da agência. */
+export async function exitClient() {
+  const jar = await cookies();
+  jar.delete(ACTIVE_CLIENT_COOKIE);
+  redirect("/clientes");
+}
+
 /** Cria um novo client (versão simples; o wizard de WhatsApp vem na fase Meta). */
 export async function createClient(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();

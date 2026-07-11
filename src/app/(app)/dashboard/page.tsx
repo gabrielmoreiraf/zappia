@@ -1,15 +1,15 @@
 import { Clock, MessageSquare, Sparkles, TrendingUp, Users, Zap } from "lucide-react";
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getCurrentClient } from "@/lib/current-client";
 import { getDashboard } from "@/db/panel";
 import { initials, tempoResposta } from "@/lib/format";
 import { Header, Metric } from "../ui";
-import { NoClient } from "../no-client";
 
 export default async function DashboardPage() {
   const session = await auth();
   const client = await getCurrentClient();
-  if (!client) return <NoClient />;
+  if (!client) redirect("/clientes");
   const d = await getDashboard(client.id);
   const userFirst =
     session?.user?.name?.split(" ")[0] ||

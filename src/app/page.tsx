@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
 export default function Home() {
-  // Fase 5 troca por: sessão? → /dashboard : /login
-  redirect("/dashboard");
+  // Admin cai na visão da agência; ao "entrar" num cliente, vê o painel dele.
+  redirect("/clientes");
 }
