@@ -4,14 +4,20 @@ import { auth } from "@/auth";
 import { getCurrentClient } from "@/lib/current-client";
 import { getDashboard } from "@/db/panel";
 import { initials, tempoResposta } from "@/lib/format";
+import { parseKnowledgeBase } from "@/lib/knowledge-base";
 import { Card } from "@/components/ui/card";
 import { Header, Metric } from "../ui";
+import { GettingStarted } from "./getting-started";
 
 export default async function DashboardPage() {
   const session = await auth();
   const client = await getCurrentClient();
   if (!client) redirect("/clientes");
   const d = await getDashboard(client.id);
+  const whatsappConnected =
+    !!client.whatsappPhoneId && !client.whatsappPhoneId.startsWith("PENDENTE");
+  const hasKnowledge = parseKnowledgeBase(client.knowledgeBase).length > 0;
+  const setupDone = whatsappConnected && hasKnowledge;
   const userFirst =
     session?.user?.name?.split(" ")[0] ||
     session?.user?.email?.split("@")[0] ||
@@ -24,6 +30,13 @@ export default async function DashboardPage() {
         title={userFirst ? `Olá, ${userFirst} 👋` : "Olá 👋"}
         sub={`Resumo de ${client.name} · hoje.`}
       />
+
+      {!setupDone && (
+        <GettingStarted
+          whatsappConnected={whatsappConnected}
+          hasKnowledge={hasKnowledge}
+        />
+      )}
 
       <div className="grid gap-3 mb-6 grid-cols-2 lg:grid-cols-4">
         <Metric label="Conversas hoje" value={String(d.conversasHoje)} icon={MessageSquare} tint="emerald" />

@@ -80,9 +80,15 @@ export function KnowledgeManager({ courses }: { courses: Course[] }) {
       </Button>
 
       {groups.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          Nenhum item cadastrado. Clique em “Adicionar item”.
-        </p>
+        <Card className="p-6 text-center gap-1">
+          <p className="text-sm font-medium text-slate-700">
+            Sua base está vazia
+          </p>
+          <p className="text-sm text-muted-foreground">
+            A IA só responde com base no que você cadastrar aqui. Adicione seus
+            produtos, serviços e preços clicando em “Adicionar item”.
+          </p>
+        </Card>
       )}
 
       <div className="space-y-5">

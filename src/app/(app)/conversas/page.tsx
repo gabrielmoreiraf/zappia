@@ -38,7 +38,10 @@ export default async function ConversasPage({
         </div>
       </div>
       {convos.length === 0 ? (
-        <p className="p-4 text-sm text-slate-400">Nenhuma conversa ainda.</p>
+        <p className="p-4 text-sm text-slate-500">
+          Nenhuma conversa ainda. Elas aparecem aqui automaticamente quando alguém
+          chama seu WhatsApp.
+        </p>
       ) : (
         convos.map((c) => {
           const st = CONV_STATUS[c.status];

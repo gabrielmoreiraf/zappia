@@ -15,6 +15,7 @@ import {
   Building2,
   Wallet,
   ChevronLeft,
+  Store,
   type LucideIcon,
 } from "lucide-react";
 import { exitClient } from "./agency-actions";
@@ -89,8 +90,11 @@ export function Sidebar({
         {/* Painel do cliente ativo */}
         {activeClientName && (
           <div>
-            <div className="flex items-center justify-between px-2 mb-1">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide truncate">
+            <div className="flex items-center gap-2 px-2 py-2 mb-1.5 rounded-xl bg-slate-50 border border-slate-100">
+              <span className="w-7 h-7 rounded-lg bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                <Store size={15} />
+              </span>
+              <span className="text-sm font-semibold text-slate-800 truncate flex-1">
                 {activeClientName}
               </span>
               {isAdmin && (
@@ -100,7 +104,7 @@ export function Sidebar({
                     title="Voltar para a agência"
                     className="text-slate-400 hover:text-emerald-600 flex items-center"
                   >
-                    <ChevronLeft size={15} />
+                    <ChevronLeft size={16} />
                   </button>
                 </form>
               )}

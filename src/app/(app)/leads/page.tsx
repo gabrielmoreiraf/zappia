@@ -64,7 +64,11 @@ export default async function LeadsPage({
 
       <Card className="p-0 gap-0 overflow-hidden">
         {rows.length === 0 ? (
-          <p className="p-4 text-sm text-slate-400">Nenhum lead nesse filtro.</p>
+          <p className="p-4 text-sm text-slate-500">
+            {status
+              ? "Nenhum lead nesse filtro."
+              : "Nenhum lead ainda. Quando a IA identificar interesse de compra numa conversa, o contato vira um lead aqui."}
+          </p>
         ) : (
           rows.map((l, i) => (
             <div

@@ -46,7 +46,9 @@ export default async function AppLayout({
           </div>
         </div>
 
-        <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-6">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 pb-24 md:pb-6">
+          <div className="mx-auto w-full max-w-5xl">{children}</div>
+        </main>
       </div>
 
       <MobileNav isAdmin={isAdmin} hasActiveClient={!!client} />
