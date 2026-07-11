@@ -92,12 +92,23 @@ export function WhatsAppConnectionCard({
       ) {
         return;
       }
+
+      // O SDK às vezes manda o payload já como objeto, às vezes como string
+      // JSON — trata os dois casos. (Log temporário pra depurar o onboarding.)
       let data: { type?: string; event?: string; data?: Record<string, string> };
-      try {
-        data = JSON.parse(event.data);
-      } catch {
+      if (typeof event.data === "string") {
+        try {
+          data = JSON.parse(event.data);
+        } catch {
+          console.log("[whatsapp-connect] mensagem não-JSON ignorada:", event.data);
+          return;
+        }
+      } else if (event.data && typeof event.data === "object") {
+        data = event.data;
+      } else {
         return;
       }
+      console.log("[whatsapp-connect] mensagem recebida:", data);
       if (data.type !== "WA_EMBEDDED_SIGNUP") return;
 
       if (data.event === "FINISH" && !finishing.current) {
@@ -152,8 +163,25 @@ export function WhatsAppConnectionCard({
     await loadFacebookSdk();
     window.FB!.login(
       (response) => {
+        console.log("[whatsapp-connect] FB.login callback:", response);
         // A confirmação de verdade (phone_number_id/waba_id) chega pelo
-        // postMessage "WA_EMBEDDED_SIGNUP" tratado em onMessage acima.
+        // postMessage "WA_EMBEDDED_SIGNUP" tratado em onMessage acima. Se o
+        // popup fechar (com ou sem autorizar) e a mensagem nunca chegar,
+        // esse timeout evita ficar preso em "Aguardando o Facebook…" pra
+        // sempre.
+        setTimeout(() => {
+          if (!finishing.current) {
+            setStatus((s) => {
+              if (s === "waiting-popup") {
+                toast.error(
+                  "A Meta não confirmou a conexão. Tente de novo — se persistir, verifique se o popup foi bloqueado.",
+                );
+                return "idle";
+              }
+              return s;
+            });
+          }
+        }, 15000);
         if (!response.authResponse) {
           setStatus("idle");
         }
