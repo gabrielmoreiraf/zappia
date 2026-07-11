@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bot, Mic, Send, Users } from "lucide-react";
+import { ArrowLeft, Bot, Mic, Send, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { assumirConversa, sendReply } from "../actions";
+import { assumirConversa, devolverParaIA, sendReply } from "../actions";
 import { initials, timeShort } from "@/lib/format";
 
 export interface ChatMessage {
@@ -56,6 +56,12 @@ export function ChatPanel({
       await onChanged?.();
     });
   }
+  function devolver() {
+    start(async () => {
+      await devolverParaIA(conversation.id);
+      await onChanged?.();
+    });
+  }
   function enviar(e: React.FormEvent) {
     e.preventDefault();
     const text = draft.trim();
@@ -90,7 +96,16 @@ export function ChatPanel({
             </div>
           </div>
         </div>
-        {conversation.status !== "voce" && (
+        {conversation.status === "voce" ? (
+          <Button
+            onClick={devolver}
+            disabled={pending}
+            size="sm"
+            className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+          >
+            <Sparkles size={13} /> Devolver pra IA
+          </Button>
+        ) : (
           <Button
             onClick={assumir}
             disabled={pending}

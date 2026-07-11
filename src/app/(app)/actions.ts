@@ -30,6 +30,22 @@ export async function assumirConversa(conversationId: string) {
   revalidatePath("/conversas");
 }
 
+/** "Devolver pra IA": religa a IA na conversa (status → "ia"). */
+export async function devolverParaIA(conversationId: string) {
+  const client = await getCurrentClient();
+  if (!client) return;
+  await db
+    .update(conversations)
+    .set({ status: "ia" })
+    .where(
+      and(
+        eq(conversations.id, conversationId),
+        eq(conversations.clientId, client.id),
+      ),
+    );
+  revalidatePath("/conversas");
+}
+
 /** Envio manual do dono. Grava a mensagem e tenta entregar via Cloud API. */
 export async function sendReply(conversationId: string, text: string) {
   const body = text.trim();
