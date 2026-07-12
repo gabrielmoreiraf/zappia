@@ -6,9 +6,11 @@ import {
   LayoutDashboard,
   MessageSquare,
   Users,
+  UserCog,
   BookOpen,
   SlidersHorizontal,
   Settings,
+  Palette,
   Bot,
   Building2,
   Wallet,
@@ -17,30 +19,44 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { exitClient } from "./agency-actions";
+import type { Caps } from "@/lib/permissions";
 
 type Item = { href: string; label: string; icon: LucideIcon };
+type Section = { label: string; items: Item[] };
 
-const CLIENT_SECTIONS: { label: string; items: Item[] }[] = [
-  {
-    label: "Operação",
-    items: [
-      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/conversas", label: "Conversas", icon: MessageSquare },
-      { href: "/leads", label: "Leads", icon: Users },
-    ],
-  },
-  {
-    label: "IA",
-    items: [
-      { href: "/conhecimento", label: "Base de conhecimento", icon: BookOpen },
-      { href: "/ajustes", label: "Ajustes da IA", icon: SlidersHorizontal },
-    ],
-  },
-  {
-    label: "Conta",
-    items: [{ href: "/config", label: "Configurações", icon: Settings }],
-  },
-];
+/** Seções do painel do cliente, filtradas pelas permissões do usuário. */
+function clientSections(caps: Caps): Section[] {
+  const operacao: Item[] = [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/conversas", label: "Conversas", icon: MessageSquare },
+  ];
+  if (caps.leads) operacao.push({ href: "/leads", label: "Leads", icon: Users });
+
+  const sections: Section[] = [{ label: "Operação", items: operacao }];
+
+  if (caps.useAI) {
+    sections.push({
+      label: "IA",
+      items: [
+        { href: "/conhecimento", label: "Base de conhecimento", icon: BookOpen },
+        { href: "/ajustes", label: "Ajustes da IA", icon: SlidersHorizontal },
+      ],
+    });
+  }
+
+  if (caps.manageAccount) {
+    sections.push({
+      label: "Configurações",
+      items: [
+        { href: "/personalizacao", label: "Personalização", icon: Palette },
+        { href: "/equipe", label: "Equipe", icon: UserCog },
+        { href: "/config", label: "Configurações", icon: Settings },
+      ],
+    });
+  }
+
+  return sections;
+}
 
 const AGENCY_ITEMS: Item[] = [
   { href: "/clientes", label: "Clientes", icon: Building2 },
@@ -80,11 +96,16 @@ function NavLink({ item, pathname }: { item: Item; pathname: string }) {
 export function Sidebar({
   isAdmin,
   activeClientName,
+  activeClientLogo,
+  caps,
 }: {
   isAdmin: boolean;
   activeClientName: string | null;
+  activeClientLogo?: string | null;
+  caps: Caps;
 }) {
   const pathname = usePathname();
+  const sections = clientSections(caps);
   return (
     <aside className="hidden md:flex w-72 shrink-0 bg-white border-r border-slate-200 flex-col h-screen sticky top-0">
       {/* Mesma altura da topbar — as bordas ficam alinhadas numa faixa só. */}
@@ -97,8 +118,17 @@ export function Sidebar({
         {activeClientName && (
           <div>
             <div className="flex items-center gap-2 px-2 py-2 mb-1.5 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="w-7 h-7 rounded-lg bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                <Store size={15} />
+              <span className="w-7 h-7 rounded-lg overflow-hidden bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                {activeClientLogo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={activeClientLogo}
+                    alt={activeClientName}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Store size={15} />
+                )}
               </span>
               <span className="text-sm font-semibold text-slate-800 truncate flex-1">
                 {activeClientName}
@@ -116,7 +146,7 @@ export function Sidebar({
               )}
             </div>
             <div className="space-y-4">
-              {CLIENT_SECTIONS.map((sec) => (
+              {sections.map((sec) => (
                 <div key={sec.label}>
                   <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide px-2 mb-1">
                     {sec.label}
@@ -148,27 +178,30 @@ export function Sidebar({
 
 export function MobileNav({
   isAdmin,
-  hasActiveClient,
+  caps,
 }: {
   isAdmin: boolean;
-  hasActiveClient: boolean;
+  caps: Caps | null;
 }) {
   const pathname = usePathname();
-  const items: Item[] = hasActiveClient
-    ? [
-        { href: "/dashboard", label: "Início", icon: LayoutDashboard },
-        { href: "/conversas", label: "Conversas", icon: MessageSquare },
-        { href: "/leads", label: "Leads", icon: Users },
-        { href: "/conhecimento", label: "Base", icon: BookOpen },
-        { href: "/config", label: "Config", icon: Settings },
-      ]
-    : isAdmin
-      ? [
-          { href: "/clientes", label: "Clientes", icon: Building2 },
-          { href: "/faturamento", label: "Faturamento", icon: Wallet },
-          { href: "/perfil", label: "Perfil", icon: Users },
-        ]
-      : [];
+  let items: Item[] = [];
+  if (caps) {
+    items = [
+      { href: "/dashboard", label: "Início", icon: LayoutDashboard },
+      { href: "/conversas", label: "Conversas", icon: MessageSquare },
+    ];
+    if (caps.leads) items.push({ href: "/leads", label: "Leads", icon: Users });
+    if (caps.useAI)
+      items.push({ href: "/conhecimento", label: "Base", icon: BookOpen });
+    if (caps.manageAccount)
+      items.push({ href: "/config", label: "Config", icon: Settings });
+  } else if (isAdmin) {
+    items = [
+      { href: "/clientes", label: "Clientes", icon: Building2 },
+      { href: "/faturamento", label: "Faturamento", icon: Wallet },
+      { href: "/perfil", label: "Perfil", icon: Users },
+    ];
+  }
 
   if (items.length === 0) return null;
 

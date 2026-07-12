@@ -1,11 +1,15 @@
 import { getCurrentClient } from "@/lib/current-client";
+import { getCurrentUser } from "@/lib/current-user";
+import { capsFor } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { Header } from "../ui";
 import { AjustesForm } from "./ajustes-form";
 
 export default async function AjustesPage() {
+  const user = await getCurrentUser();
   const client = await getCurrentClient();
-  if (!client) redirect("/clientes");
+  if (!user || !client) redirect("/clientes");
+  if (!capsFor(user).useAI) redirect("/dashboard");
   return (
     <div>
       <Header
@@ -17,6 +21,9 @@ export default async function AjustesPage() {
         welcomeMessage={client.welcomeMessage ?? ""}
         tone={client.tone}
         triggers={client.handoffTriggers ?? []}
+        waitingMessage={client.waitingMessage}
+        closingMessage={client.closingMessage}
+        inactivityMinutes={client.inactivityMinutes}
       />
     </div>
   );

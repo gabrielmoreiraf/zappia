@@ -35,12 +35,21 @@ export const leadStatusEnum = pgEnum("lead_status", [
   "matriculado",
 ]);
 export const userRoleEnum = pgEnum("user_role", ["owner", "member"]);
+// Papel do funcionário (só para members). Gerente = tudo menos marca/plano/
+// usuários; Atendente = conversas + leads.
+export const teamRoleEnum = pgEnum("team_role", ["gerente", "atendente"]);
 
 /* ---------- clients ---------- */
 
 export const clients = pgTable("clients", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
+  // Logo da empresa (data URL base64, como o avatar do usuário). Aparece na
+  // sidebar no lugar do ícone genérico.
+  logoUrl: text("logo_url"),
+  // Cor da marca (#hex). null = verde padrão do Zappia. Quando definida, o
+  // painel inteiro é recolorido (variáveis --color-emerald-* no shell).
+  brandColor: text("brand_color"),
   // Login simples do cliente no v1 (§3). Auth real de papéis vem depois.
   ownerEmail: text("owner_email"),
   businessDescription: text("business_description"),
@@ -51,6 +60,21 @@ export const clients = pgTable("clients", {
   tone: text("tone").default("Amigável").notNull(),
   welcomeMessage: text("welcome_message"),
   handoffTriggers: text("handoff_triggers").array().default([]).notNull(),
+  // Mensagem de "alta demanda" enviada quando o cliente insiste enquanto a
+  // conversa aguarda atendimento humano (não é gerada pela IA — texto fixo).
+  waitingMessage: text("waiting_message")
+    .default(
+      "Estamos com bastante procura no momento, mas logo já retornamos por aqui. Obrigado pela paciência!",
+    )
+    .notNull(),
+  // Encerramento por inatividade: minutos de silêncio do cliente até fechar
+  // (0 = desligado) e a mensagem de despedida enviada ao encerrar.
+  inactivityMinutes: integer("inactivity_minutes").default(15).notNull(),
+  closingMessage: text("closing_message")
+    .default(
+      "Como ficamos um tempinho sem falar, vou encerrar nosso atendimento por aqui. Se precisar de qualquer coisa, é só me chamar de novo!",
+    )
+    .notNull(),
   // true assim que o cliente salvar os Ajustes da IA ao menos uma vez (tutorial).
   aiConfigured: boolean("ai_configured").default(false).notNull(),
   // Markdown estruturado (§3 do prompt mestre), injetado no prompt com caching.
@@ -85,6 +109,9 @@ export const conversations = pgTable(
     lastMessageAt: timestamp("last_message_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
+    // Preenchido quando a conversa é encerrada por inatividade. Uma nova
+    // mensagem do cliente zera isso e reabre a conversa (status → "ia").
+    closedAt: timestamp("closed_at", { withTimezone: true }),
     unreadCount: integer("unread_count").default(0).notNull(),
   },
   (t) => [unique("conversations_client_contact_uq").on(t.clientId, t.contactPhone)],
@@ -136,6 +163,8 @@ export const users = pgTable("users", {
   name: text("name"),
   passwordHash: text("password_hash").notNull(),
   role: userRoleEnum("role").default("member").notNull(),
+  // Papel na equipe do cliente (só para funcionários convidados). null = dono.
+  teamRole: teamRoleEnum("team_role"),
   // Negócio do usuário-cliente (null para o admin e antes do onboarding).
   clientId: uuid("client_id").references(() => clients.id, {
     onDelete: "set null",
@@ -158,6 +187,25 @@ export const emailVerifications = pgTable("email_verifications", {
   codeHash: text("code_hash").notNull(), // bcrypt do código
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   attempts: integer("attempts").default(0).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+/* ---------- convites de equipe (funcionários) ---------- */
+
+export const teamInvites = pgTable("team_invites", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  clientId: uuid("client_id")
+    .notNull()
+    .references(() => clients.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  name: text("name").notNull(),
+  teamRole: teamRoleEnum("team_role").notNull(),
+  // bcrypt do "secret" que vai no link do convite (a parte após o id).
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  acceptedAt: timestamp("accepted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -251,5 +299,6 @@ export type NewLead = typeof leads.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type EmailVerification = typeof emailVerifications.$inferSelect;
+export type TeamInvite = typeof teamInvites.$inferSelect;
 export type UsageLog = typeof usageLog.$inferSelect;
 export type NewUsageLog = typeof usageLog.$inferInsert;

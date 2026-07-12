@@ -6,6 +6,7 @@ import { downloadMedia, getMediaUrl, sendText } from "./whatsapp";
 import type { Client } from "@/db/schema";
 import {
   getClientByPhoneId,
+  getLastOutboundAt,
   getOrCreateConversation,
   getRecentMessages,
   insertMessage,
@@ -14,6 +15,10 @@ import {
   touchConversation,
   upsertLead,
 } from "@/db/queries";
+
+// Enquanto aguarda humano: repete a mensagem de "alta demanda" no máximo a
+// cada N minutos (tranquiliza 1x e silencia nos "oi?/eai?" seguidos).
+const WAIT_REASSURE_MIN = 15;
 
 /** Mensagem recebida, já extraída do payload do webhook. */
 export interface InboundMessage {
@@ -74,9 +79,38 @@ export async function processInbound(
     waMessageId: msg.waMessageId,
   });
 
+  // Conversa encerrada por inatividade: o cliente voltou a falar → reabre e a
+  // IA retoma o atendimento normalmente.
+  if (convo.closedAt) {
+    await touchConversation(convo.id, { status: "ia", closedAt: null });
+    convo.status = "ia";
+    convo.closedAt = null;
+  }
+
   // Se um humano assumiu a conversa, a IA não responde.
   if (convo.status === "voce") {
     await touchConversation(convo.id, { incUnread: 1 });
+    return { status: "handled_by_human" };
+  }
+
+  // Aguardando atendimento humano: a IA NÃO improvisa. Manda a mensagem de
+  // "alta demanda" (tranquiliza), mas só se faz um tempo desde a última resposta
+  // nossa — assim não repete a cada "oi?/eai?".
+  if (convo.status === "novo") {
+    await touchConversation(convo.id, { incUnread: 1 });
+    const waiting = client.waitingMessage?.trim();
+    const lastOut = await getLastOutboundAt(convo.id);
+    const stale =
+      !lastOut || Date.now() - lastOut.getTime() > WAIT_REASSURE_MIN * 60_000;
+    if (waiting && stale) {
+      await insertMessage({ conversationId: convo.id, from: "bot", text: waiting });
+      await touchConversation(convo.id, { lastMessageAt: new Date() });
+      try {
+        await sendText(msg.phoneNumberId, msg.from, waiting);
+      } catch (err) {
+        console.error("[pipeline] envio da mensagem de espera falhou:", err);
+      }
+    }
     return { status: "handled_by_human" };
   }
 
@@ -97,8 +131,9 @@ export async function processInbound(
     confidence: output.confidence,
   });
 
-  // Detecta transição NOVA para handoff (evita avisar de novo se já estava "novo").
-  const newHandoff = output.handoff && convo.status !== "novo";
+  // Aqui a conversa está sempre em "ia" (as "novo"/"voce" já retornaram acima),
+  // então qualquer handoff da IA é uma transição nova → notifica o dono.
+  const newHandoff = output.handoff;
   const contactName = convo.contactName ?? msg.contactName ?? null;
 
   // 8. atualiza a conversa (handoff muda status p/ "novo")

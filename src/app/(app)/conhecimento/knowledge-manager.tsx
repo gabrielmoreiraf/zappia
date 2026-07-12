@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -75,9 +75,18 @@ export function KnowledgeManager({ courses }: { courses: Course[] }) {
 
   return (
     <div>
-      <Button className="mb-5" onClick={() => openEdit({ ...EMPTY }, true)}>
-        <Plus /> Adicionar item
-      </Button>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-base font-semibold text-slate-800">
+          O que sua IA já sabe
+        </h2>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => openEdit({ ...EMPTY }, true)}
+        >
+          <Plus size={15} /> Adicionar manual
+        </Button>
+      </div>
 
       {groups.length === 0 && (
         <Card className="p-6 text-center gap-1">
@@ -85,8 +94,8 @@ export function KnowledgeManager({ courses }: { courses: Course[] }) {
             Sua base está vazia
           </p>
           <p className="text-sm text-muted-foreground">
-            A IA só responde com base no que você cadastrar aqui. Adicione seus
-            produtos, serviços e preços clicando em “Adicionar item”.
+            Descreva seu negócio no campo acima e deixe a IA montar, ou clique em
+            “Adicionar manual”.
           </p>
         </Card>
       )}
@@ -107,8 +116,15 @@ export function KnowledgeManager({ courses }: { courses: Course[] }) {
                   }`}
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-semibold text-slate-800 truncate">
-                      {c.nome}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm font-semibold text-slate-800 truncate">
+                        {c.nome}
+                      </span>
+                      {c.origem === "ia" && (
+                        <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 flex items-center gap-0.5">
+                          <Sparkles size={10} /> IA
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-slate-400 truncate">
                       {info(c)}

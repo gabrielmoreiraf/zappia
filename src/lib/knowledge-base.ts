@@ -13,6 +13,8 @@ export interface Course {
   cargaHoraria?: string;
   observacao?: string;
   ativo: boolean;
+  /** Como o item entrou na base: "ia" (montado pela IA) ou manual/undefined. */
+  origem?: "ia" | "manual";
 }
 
 function normKey(k: string): string {
@@ -49,6 +51,7 @@ export function parseKnowledgeBase(md: string | null | undefined): Course[] {
       cargaHoraria: fields.carga_horaria || undefined,
       observacao: fields.observacao || undefined,
       ativo: fields.ativo ? fields.ativo.toLowerCase() !== "false" : true,
+      origem: fields.origem === "ia" ? "ia" : undefined,
     });
   }
   return courses;
@@ -64,6 +67,7 @@ export function serializeKnowledgeBase(courses: Course[]): string {
       if (c.status === "confirmado" && c.valor) lines.push(`- valor: ${c.valor}`);
       lines.push(`- carga_horária: ${c.cargaHoraria || "a confirmar"}`);
       if (c.observacao) lines.push(`- observação: ${c.observacao}`);
+      if (c.origem === "ia") lines.push(`- origem: ia`);
       lines.push(`- ativo: ${c.ativo ? "true" : "false"}`);
       return lines.join("\n");
     })

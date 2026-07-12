@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/current-user";
 import { getCurrentClient } from "@/lib/current-client";
 import { getNotifications } from "@/db/panel";
 import { isAdminEmail } from "@/lib/roles";
+import { capsFor } from "@/lib/permissions";
 import { MobileNav, Sidebar } from "./nav";
 import { Topbar } from "./topbar";
 
@@ -18,6 +19,7 @@ export default async function AppLayout({
   if (!user) redirect("/login");
 
   const isAdmin = isAdminEmail(user.email);
+  const caps = capsFor(user);
   const client = await getCurrentClient();
   // Cliente sem negócio ainda → onboarding.
   if (!isAdmin && !client) redirect("/bem-vindo");
@@ -27,8 +29,22 @@ export default async function AppLayout({
     : { items: [], count: 0 };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-100">
-      <Sidebar isAdmin={isAdmin} activeClientName={client?.name ?? null} />
+    <div
+      className={`flex h-screen overflow-hidden bg-slate-100 ${
+        client?.brandColor ? "app-theme" : ""
+      }`}
+      style={
+        client?.brandColor
+          ? ({ "--brand": client.brandColor } as React.CSSProperties)
+          : undefined
+      }
+    >
+      <Sidebar
+        isAdmin={isAdmin}
+        activeClientName={client?.name ?? null}
+        activeClientLogo={client?.logoUrl ?? null}
+        caps={caps}
+      />
 
       <div className="flex-1 min-w-0 flex flex-col">
         <Topbar
@@ -45,7 +61,7 @@ export default async function AppLayout({
         </main>
       </div>
 
-      <MobileNav isAdmin={isAdmin} hasActiveClient={!!client} />
+      <MobileNav isAdmin={isAdmin} caps={client ? caps : null} />
     </div>
   );
 }

@@ -17,17 +17,26 @@ export function AjustesForm({
   welcomeMessage,
   tone,
   triggers,
+  waitingMessage,
+  closingMessage,
+  inactivityMinutes,
 }: {
   assistantName: string;
   welcomeMessage: string;
   tone: string;
   triggers: string[];
+  waitingMessage: string;
+  closingMessage: string;
+  inactivityMinutes: number;
 }) {
   const [name, setName] = useState(assistantName);
   const [welcome, setWelcome] = useState(welcomeMessage);
   const [selTone, setSelTone] = useState(tone || "Amigável");
   const [tags, setTags] = useState<string[]>(triggers);
   const [newTag, setNewTag] = useState("");
+  const [waiting, setWaiting] = useState(waitingMessage);
+  const [closing, setClosing] = useState(closingMessage);
+  const [mins, setMins] = useState(String(inactivityMinutes));
   const [pending, start] = useTransition();
 
   function addTag() {
@@ -131,6 +140,63 @@ export function AjustesForm({
                     <Plus size={14} />
                   </Button>
                 </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 space-y-4">
+              <div>
+                <p className="text-sm font-medium text-slate-700">
+                  Ausência e espera
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  O que a IA faz quando o cliente fica na fila ou some.
+                </p>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="waitingMessage">
+                  Mensagem enquanto o cliente aguarda você
+                </Label>
+                <Textarea
+                  id="waitingMessage"
+                  name="waitingMessage"
+                  rows={2}
+                  value={waiting}
+                  onChange={(e) => setWaiting(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enviada quando o cliente insiste enquanto a conversa está na fila
+                  pra você. A IA para de improvisar.
+                </p>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="inactivityMinutes">
+                  Encerrar por inatividade após (minutos)
+                </Label>
+                <Input
+                  id="inactivityMinutes"
+                  name="inactivityMinutes"
+                  type="number"
+                  min={0}
+                  className="w-32"
+                  value={mins}
+                  onChange={(e) => setMins(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  0 desliga. Conversas aguardando você não são encerradas.
+                </p>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="closingMessage">Mensagem de encerramento</Label>
+                <Textarea
+                  id="closingMessage"
+                  name="closingMessage"
+                  rows={2}
+                  value={closing}
+                  onChange={(e) => setClosing(e.target.value)}
+                />
               </div>
             </div>
 

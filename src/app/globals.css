@@ -180,3 +180,87 @@ body {
 .animate-fade-up {
   animation: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+/*
+ * Toasts (sonner) — card branco, limpo, com ícone em selo colorido por tipo.
+ * Substitui o visual "richColors" (bloco sólido) que ficava pesado.
+ */
+.cn-toast {
+  border-radius: 14px !important;
+  border: 1px solid #e2e8f0 !important; /* slate-200 */
+  background: #ffffff !important;
+  color: #0f172a !important; /* slate-900 */
+  box-shadow:
+    0 10px 30px -12px rgba(15, 23, 42, 0.22),
+    0 2px 8px -3px rgba(15, 23, 42, 0.08) !important;
+  padding: 13px 15px !important;
+  gap: 11px !important;
+  font-family: var(--font-sans) !important;
+}
+.cn-toast [data-title] {
+  font-weight: 600;
+  font-size: 13.5px;
+  line-height: 1.35;
+  color: #0f172a;
+}
+.cn-toast [data-description] {
+  font-size: 12.5px;
+  color: #64748b; /* slate-500 */
+}
+.cn-toast [data-icon] {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}
+.cn-toast [data-icon] > svg {
+  width: 16px;
+  height: 16px;
+}
+.cn-toast[data-type="success"] [data-icon] {
+  background: #ecfdf5;
+  color: #059669;
+} /* emerald */
+.cn-toast[data-type="error"] [data-icon] {
+  background: #fef2f2;
+  color: #dc2626;
+} /* red */
+.cn-toast[data-type="warning"] [data-icon] {
+  background: #fffbeb;
+  color: #d97706;
+} /* amber */
+.cn-toast[data-type="info"] [data-icon] {
+  background: #eff6ff;
+  color: #2563eb;
+} /* blue */
+.cn-toast [data-close-button] {
+  color: #94a3b8;
+  border: none;
+  background: transparent;
+}
+
+/*
+ * Tema da marca do cliente. Aplicado no shell do painel (app) quando o cliente
+ * escolhe uma cor. Sobrescreve as variáveis --color-emerald-* (que as utilities
+ * do Tailwind v4 leem), recolorindo o painel inteiro sem tocar em componente.
+ * Também usado no preview ao vivo da tela de Personalização.
+ * A landing/login ficam fora deste escopo → seguem verdes (marca do Zappia).
+ */
+.app-theme {
+  --color-emerald-50: color-mix(in oklab, var(--brand) 8%, white);
+  --color-emerald-100: color-mix(in oklab, var(--brand) 15%, white);
+  --color-emerald-200: color-mix(in oklab, var(--brand) 30%, white);
+  --color-emerald-300: color-mix(in oklab, var(--brand) 50%, white);
+  --color-emerald-400: color-mix(in oklab, var(--brand) 74%, white);
+  --color-emerald-500: var(--brand);
+  --color-emerald-600: color-mix(in oklab, var(--brand) 86%, black);
+  --color-emerald-700: color-mix(in oklab, var(--brand) 72%, black);
+  --color-emerald-800: color-mix(in oklab, var(--brand) 60%, black);
+  --color-emerald-900: color-mix(in oklab, var(--brand) 50%, black);
+  --color-emerald-950: color-mix(in oklab, var(--brand) 34%, black);
+  /* Botões primários e anéis de foco (shadcn) seguem a marca. */
+  --primary: var(--brand);
+  --ring: var(--brand);
+}

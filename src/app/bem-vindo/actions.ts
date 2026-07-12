@@ -63,7 +63,12 @@ export async function createOwnBusiness(
     })
     .returning();
 
-  await db.update(users).set({ clientId: client.id }).where(eq(users.id, userId));
+  // Quem cria o negócio é o dono (usuário master). Funcionários convidados
+  // depois entram como "member".
+  await db
+    .update(users)
+    .set({ clientId: client.id, role: "owner" })
+    .where(eq(users.id, userId));
 
   redirect("/dashboard");
 }

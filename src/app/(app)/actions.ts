@@ -10,6 +10,8 @@ import {
   serializeKnowledgeBase,
   type Course,
 } from "@/lib/knowledge-base";
+import { extractCourses } from "@/lib/ai/extract-knowledge";
+import { runHaiku, type HistoryTurn } from "@/lib/ai/haiku";
 import { sendText } from "@/lib/whatsapp";
 
 /* ---------- Conversas (§4.4) ---------- */
@@ -117,6 +119,12 @@ export async function saveAjustes(formData: FormData) {
     .map((t) => t.trim())
     .filter(Boolean);
 
+  const waitingMessage = String(formData.get("waitingMessage") ?? "").trim();
+  const closingMessage = String(formData.get("closingMessage") ?? "").trim();
+  const rawMin = Number(formData.get("inactivityMinutes"));
+  const inactivityMinutes =
+    Number.isFinite(rawMin) && rawMin >= 0 ? Math.floor(rawMin) : 15;
+
   await db
     .update(clients)
     .set({
@@ -124,6 +132,9 @@ export async function saveAjustes(formData: FormData) {
       welcomeMessage,
       tone,
       handoffTriggers,
+      ...(waitingMessage ? { waitingMessage } : {}),
+      ...(closingMessage ? { closingMessage } : {}),
+      inactivityMinutes,
       aiConfigured: true,
     })
     .where(eq(clients.id, client.id));
@@ -195,6 +206,8 @@ export async function upsertCourse(formData: FormData) {
     cargaHoraria: String(formData.get("cargaHoraria") ?? "").trim() || undefined,
     observacao: String(formData.get("observacao") ?? "").trim() || undefined,
     ativo: formData.get("ativo") != null,
+    // Ao editar/adicionar na mão, o item passa a ser "seu" (some o selo da IA).
+    origem: "manual",
   };
 
   const idx = courses.findIndex(
@@ -213,4 +226,50 @@ export async function deleteCourse(nome: string) {
     (c) => c.nome !== nome,
   );
   await writeCourses(client.id, courses);
+}
+
+/* ---------- IA monta pra você (extração de texto livre) ---------- */
+
+/** Passa um texto livre pela IA e devolve os itens propostos (ainda NÃO salva). */
+export async function proposeCoursesFromText(text: string): Promise<Course[]> {
+  const client = await getCurrentClient();
+  if (!client) return [];
+  try {
+    return await extractCourses(client.name, text);
+  } catch (err) {
+    console.error("[proposeCoursesFromText] extração falhou:", err);
+    return [];
+  }
+}
+
+/** Mescla os itens escolhidos na base (substitui por nome, sem duplicar). */
+export async function addCourses(newCourses: Course[]) {
+  const client = await getCurrentClient();
+  if (!client || newCourses.length === 0) return;
+  const courses = parseKnowledgeBase(client.knowledgeBase);
+  for (const nc of newCourses) {
+    if (!nc.nome?.trim()) continue;
+    const idx = courses.findIndex(
+      (c) => c.nome.toLowerCase() === nc.nome.toLowerCase(),
+    );
+    if (idx >= 0) courses[idx] = nc;
+    else courses.push(nc);
+  }
+  await writeCourses(client.id, courses);
+}
+
+/* ---------- Testar a IA (sandbox, não grava conversa) ---------- */
+
+/** Roda a IA com a base atual pro dono testar. Não persiste nada no banco. */
+export async function testAssistant(
+  history: HistoryTurn[],
+): Promise<{ reply: string; handoff: boolean; confidence: "alta" | "baixa" }> {
+  const client = await getCurrentClient();
+  if (!client) return { reply: "", handoff: false, confidence: "baixa" };
+  const { output } = await runHaiku(client, history);
+  return {
+    reply: output.reply,
+    handoff: output.handoff,
+    confidence: output.confidence,
+  };
 }

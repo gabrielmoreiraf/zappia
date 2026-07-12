@@ -114,6 +114,32 @@ export async function sendPasswordResetEmail(
   await send(to, `${code} — redefinir sua senha Zappia`, shell(content));
 }
 
+/* ---------- convite de equipe ---------- */
+
+export async function sendTeamInvite(
+  to: string,
+  name: string,
+  businessName: string,
+  link: string,
+): Promise<void> {
+  const content = `
+    <tr><td style="padding:16px 32px 4px;">
+      <h1 style="margin:0 0 6px;font-size:20px;color:#0f172a;">Olá, ${escapeHtml(name)}!</h1>
+      <p style="margin:0;color:#475569;font-size:14px;line-height:1.6;">Você foi convidado para ajudar no atendimento de <strong>${escapeHtml(businessName)}</strong> pelo Zappia. Clique no botão abaixo para criar sua senha e começar. O convite expira em 7 dias.</p>
+    </td></tr>
+    <tr><td align="center" style="padding:24px 32px;">
+      <a href="${link}" style="display:inline-block;background:#10b981;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:13px 30px;border-radius:12px;">Criar minha senha</a>
+    </td></tr>
+    <tr><td style="padding:0 32px 28px;">
+      <p style="margin:0;color:#94a3b8;font-size:12px;line-height:1.6;">Se você não esperava este convite, é só ignorar este e-mail.</p>
+    </td></tr>`;
+  await send(
+    to,
+    `Convite para acessar ${businessName} no Zappia`,
+    shell(content),
+  );
+}
+
 /* ---------- notificações (Fase 7) ---------- */
 
 function infoRow(label: string, value: string): string {

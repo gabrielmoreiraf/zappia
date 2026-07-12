@@ -1,13 +1,17 @@
 import { redirect } from "next/navigation";
 import { getCurrentClient } from "@/lib/current-client";
+import { getCurrentUser } from "@/lib/current-user";
+import { capsFor } from "@/lib/permissions";
 import { Header } from "../ui";
 import { WhatsAppConnectionCard } from "./connect-whatsapp-button";
 import { NotificationsCard } from "./notifications-card";
 import { PlanCard } from "./plan-card";
 
 export default async function ConfigPage() {
+  const user = await getCurrentUser();
   const client = await getCurrentClient();
-  if (!client) redirect("/clientes");
+  if (!user || !client) redirect("/clientes");
+  if (!capsFor(user).manageAccount) redirect("/dashboard");
   const connected =
     !!client.whatsappPhoneId && !client.whatsappPhoneId.startsWith("PENDENTE");
 

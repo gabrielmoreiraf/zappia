@@ -4,24 +4,59 @@ import { env } from "../env";
 import { buildSystemPrompt } from "./prompt";
 import { normalizeHaikuOutput, type HaikuOutput } from "./types";
 
-// §5 do prompt mestre: Haiku 4.5, temperatura baixa, caching na base.
-const MODEL = "claude-haiku-4-5";
-const TEMPERATURE = 0.2;
+// §5 do prompt mestre: Haiku 4.5 é o modelo BASE (barato, rápido) e resolve a
+// maioria das mensagens. Quando o caso é complexo, escalamos pro Sonnet 5 —
+// mais capaz, mas ainda longe do custo do Opus — só nessa mensagem.
+const MODEL_FAST = "claude-haiku-4-5";
+const MODEL_SMART = process.env.AI_SMART_MODEL || "claude-sonnet-5";
+// Desligue o escalonamento com AI_ESCALATION=off (fica só no Haiku).
+const ESCALATION_ON = !["off", "0", "false"].includes(
+  (process.env.AI_ESCALATION || "on").toLowerCase(),
+);
+const TEMPERATURE = 0.2; // só o Haiku aceita temperatura; o Sonnet 5 rejeita.
 const MAX_TOKENS = 1024;
+
+// Schema pra forçar JSON válido no Sonnet 5 (ele não aceita o prefill "{").
+const OUTPUT_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "reply",
+    "handoff",
+    "handoff_reason",
+    "lead_detected",
+    "course_mentioned",
+    "confidence",
+  ],
+  properties: {
+    reply: { type: "string" },
+    handoff: { type: "boolean" },
+    handoff_reason: { type: ["string", "null"] },
+    lead_detected: { type: "boolean" },
+    course_mentioned: { type: ["string", "null"] },
+    confidence: { type: "string", enum: ["alta", "baixa"] },
+  },
+} as const;
 
 export interface HistoryTurn {
   from: "them" | "bot" | "you";
   text: string;
 }
 
+export interface Usage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
+}
+
 export interface HaikuResult {
   output: HaikuOutput;
-  usage: {
-    inputTokens: number;
-    outputTokens: number;
-    cacheReadTokens: number;
-    cacheCreationTokens: number;
-  };
+  usage: Usage;
+  /** Modelo que produziu a resposta final (para logs/depuração). */
+  model: string;
+  /** true quando precisou escalar pro modelo mais forte. */
+  escalated: boolean;
   raw: string;
 }
 
@@ -67,9 +102,46 @@ function fallbackOutput(): HaikuOutput {
   };
 }
 
+function usageOf(resp: Anthropic.Message): Usage {
+  return {
+    inputTokens: resp.usage.input_tokens,
+    outputTokens: resp.usage.output_tokens,
+    cacheReadTokens: resp.usage.cache_read_input_tokens ?? 0,
+    cacheCreationTokens: resp.usage.cache_creation_input_tokens ?? 0,
+  };
+}
+
+function addUsage(a: Usage, b: Usage): Usage {
+  return {
+    inputTokens: a.inputTokens + b.inputTokens,
+    outputTokens: a.outputTokens + b.outputTokens,
+    cacheReadTokens: a.cacheReadTokens + b.cacheReadTokens,
+    cacheCreationTokens: a.cacheCreationTokens + b.cacheCreationTokens,
+  };
+}
+
+function textOf(resp: Anthropic.Message): string {
+  return resp.content
+    .filter((b): b is Anthropic.TextBlock => b.type === "text")
+    .map((b) => b.text)
+    .join("");
+}
+
+/** Decide se o caso é "complexo" o bastante pra valer o modelo mais forte. */
+function shouldEscalate(parsed: unknown, output: HaikuOutput): boolean {
+  if (!ESCALATION_ON) return false;
+  // JSON ilegível → o modelo base se atrapalhou; tenta o mais forte.
+  if (!parsed) return true;
+  // Base incerta, mas SEM ser um handoff de "info não está na base" (aí o
+  // Sonnet também não teria a info — não adianta gastar). Escalamos os casos
+  // genuinamente ambíguos, onde um modelo melhor dá uma resposta melhor.
+  return output.confidence === "baixa" && !output.handoff;
+}
+
 /**
  * Roda o Haiku para uma conversa. `history` é o histórico recente (mais antigo
  * primeiro), já incluindo a mensagem atual do cliente como último turno "them".
+ * Quando o caso é complexo, escala automaticamente pro modelo mais forte.
  */
 export async function runHaiku(
   client: Client,
@@ -95,42 +167,72 @@ export async function runHaiku(
   // A API exige começar com user.
   while (merged.length && merged[0].role === "assistant") merged.shift();
 
-  const messages: Anthropic.MessageParam[] = merged.map((m) => ({
+  const baseMessages: Anthropic.MessageParam[] = merged.map((m) => ({
     role: m.role,
     content: m.text,
   }));
-  // Prefill "{" força a saída a começar como JSON.
-  messages.push({ role: "assistant", content: "{" });
 
-  const resp = await anthropic().messages.create({
-    model: MODEL,
+  // --- 1ª passada: Haiku (barato). Prefill "{" força a saída a começar JSON.
+  const fastResp = await anthropic().messages.create({
+    model: MODEL_FAST,
     max_tokens: MAX_TOKENS,
     temperature: TEMPERATURE,
     system,
-    messages,
+    messages: [...baseMessages, { role: "assistant", content: "{" }],
   });
 
-  const text = resp.content
-    .filter((b): b is Anthropic.TextBlock => b.type === "text")
-    .map((b) => b.text)
-    .join("");
-  const raw = "{" + text;
-
+  const fastRaw = "{" + textOf(fastResp);
   let parsed: unknown = null;
   try {
-    parsed = JSON.parse(extractJson(raw));
+    parsed = JSON.parse(extractJson(fastRaw));
   } catch {
     parsed = null;
   }
+  const fastOutput = parsed ? normalizeHaikuOutput(parsed) : fallbackOutput();
+  let usage = usageOf(fastResp);
+
+  // --- 2ª passada (só se preciso): Sonnet 5. Sem temperatura e sem prefill;
+  // o formato JSON vem de output_config, e desligamos o thinking p/ economizar.
+  if (shouldEscalate(parsed, fastOutput)) {
+    try {
+      const smartResp = await anthropic().messages.create({
+        model: MODEL_SMART,
+        max_tokens: MAX_TOKENS,
+        thinking: { type: "disabled" },
+        system,
+        messages: baseMessages,
+        output_config: { format: { type: "json_schema", schema: OUTPUT_SCHEMA } },
+      });
+
+      const smartRaw = textOf(smartResp);
+      let smartParsed: unknown = null;
+      try {
+        smartParsed = JSON.parse(extractJson(smartRaw));
+      } catch {
+        smartParsed = null;
+      }
+      usage = addUsage(usage, usageOf(smartResp));
+
+      if (smartParsed) {
+        return {
+          output: normalizeHaikuOutput(smartParsed),
+          usage,
+          model: MODEL_SMART,
+          escalated: true,
+          raw: smartRaw,
+        };
+      }
+    } catch (err) {
+      // Escalonamento é um "extra": se falhar, seguimos com o Haiku.
+      console.error("[runHaiku] escalonamento pro modelo forte falhou:", err);
+    }
+  }
 
   return {
-    output: parsed ? normalizeHaikuOutput(parsed) : fallbackOutput(),
-    usage: {
-      inputTokens: resp.usage.input_tokens,
-      outputTokens: resp.usage.output_tokens,
-      cacheReadTokens: resp.usage.cache_read_input_tokens ?? 0,
-      cacheCreationTokens: resp.usage.cache_creation_input_tokens ?? 0,
-    },
-    raw,
+    output: fastOutput,
+    usage,
+    model: MODEL_FAST,
+    escalated: false,
+    raw: fastRaw,
   };
 }
