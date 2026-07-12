@@ -58,7 +58,7 @@ function extractJson(s: string): string {
 function fallbackOutput(): HaikuOutput {
   return {
     reply:
-      "Deixa eu confirmar isso certinho com a equipe pra não te passar nada errado — já te retorno por aqui! 🙌",
+      "Deixa eu confirmar isso certinho com a equipe pra não te passar nada errado — já te retorno por aqui, tá?",
     handoff: true,
     handoff_reason: "erro ao interpretar resposta da IA",
     lead_detected: false,
