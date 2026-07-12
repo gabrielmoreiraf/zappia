@@ -64,7 +64,7 @@ export async function acceptInvite(
         name: inv.name,
         passwordHash,
         role: "member",
-        teamRole: inv.teamRole,
+        permissions: inv.permissions,
         clientId: inv.clientId,
         emailVerifiedAt: new Date(),
       })
@@ -75,7 +75,7 @@ export async function acceptInvite(
       name: inv.name,
       passwordHash,
       role: "member",
-      teamRole: inv.teamRole,
+      permissions: inv.permissions,
       clientId: inv.clientId,
       emailVerifiedAt: new Date(),
     });

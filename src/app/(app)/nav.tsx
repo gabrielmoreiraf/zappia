@@ -28,13 +28,14 @@ type Section = { label: string; items: Item[] };
 function clientSections(caps: Caps): Section[] {
   const operacao: Item[] = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/conversas", label: "Conversas", icon: MessageSquare },
   ];
+  if (caps.conversas)
+    operacao.push({ href: "/conversas", label: "Conversas", icon: MessageSquare });
   if (caps.leads) operacao.push({ href: "/leads", label: "Leads", icon: Users });
 
   const sections: Section[] = [{ label: "Operação", items: operacao }];
 
-  if (caps.useAI) {
+  if (caps.ai) {
     sections.push({
       label: "IA",
       items: [
@@ -44,16 +45,13 @@ function clientSections(caps: Caps): Section[] {
     });
   }
 
-  if (caps.manageAccount) {
-    sections.push({
-      label: "Configurações",
-      items: [
-        { href: "/personalizacao", label: "Personalização", icon: Palette },
-        { href: "/equipe", label: "Equipe", icon: UserCog },
-        { href: "/config", label: "Configurações", icon: Settings },
-      ],
-    });
-  }
+  const cfg: Item[] = [];
+  if (caps.branding)
+    cfg.push({ href: "/personalizacao", label: "Personalização", icon: Palette });
+  if (caps.team) cfg.push({ href: "/equipe", label: "Equipe", icon: UserCog });
+  if (caps.config)
+    cfg.push({ href: "/config", label: "Configurações", icon: Settings });
+  if (cfg.length) sections.push({ label: "Configurações", items: cfg });
 
   return sections;
 }
@@ -186,14 +184,13 @@ export function MobileNav({
   const pathname = usePathname();
   let items: Item[] = [];
   if (caps) {
-    items = [
-      { href: "/dashboard", label: "Início", icon: LayoutDashboard },
-      { href: "/conversas", label: "Conversas", icon: MessageSquare },
-    ];
+    items = [{ href: "/dashboard", label: "Início", icon: LayoutDashboard }];
+    if (caps.conversas)
+      items.push({ href: "/conversas", label: "Conversas", icon: MessageSquare });
     if (caps.leads) items.push({ href: "/leads", label: "Leads", icon: Users });
-    if (caps.useAI)
+    if (caps.ai)
       items.push({ href: "/conhecimento", label: "Base", icon: BookOpen });
-    if (caps.manageAccount)
+    if (caps.config)
       items.push({ href: "/config", label: "Config", icon: Settings });
   } else if (isAdmin) {
     items = [

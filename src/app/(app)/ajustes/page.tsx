@@ -9,7 +9,7 @@ export default async function AjustesPage() {
   const user = await getCurrentUser();
   const client = await getCurrentClient();
   if (!user || !client) redirect("/clientes");
-  if (!capsFor(user).useAI) redirect("/dashboard");
+  if (!capsFor(user).ai) redirect("/dashboard");
   return (
     <div>
       <Header

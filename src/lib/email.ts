@@ -114,6 +114,27 @@ export async function sendPasswordResetEmail(
   await send(to, `${code} — redefinir sua senha Zappia`, shell(content));
 }
 
+/* ---------- concierge: solicitação de conexão do WhatsApp ---------- */
+
+export async function sendWhatsappRequestNotification(
+  to: string,
+  info: { clientName: string; number: string; contactEmail: string },
+): Promise<void> {
+  const content = `
+    <tr><td style="padding:16px 32px 4px;">
+      <h1 style="margin:0 0 6px;font-size:20px;color:#0f172a;">Nova solicitação de conexão</h1>
+      <p style="margin:0;color:#475569;font-size:14px;line-height:1.6;">Um cliente pediu pra conectar o WhatsApp dele. Faça o setup na Meta e marque o número como conectado.</p>
+    </td></tr>
+    <tr><td style="padding:16px 32px 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${infoRow("Cliente", info.clientName)}
+        ${infoRow("Número", info.number)}
+        ${infoRow("Contato", info.contactEmail)}
+      </table>
+    </td></tr>`;
+  await send(to, `Conexão WhatsApp solicitada: ${info.clientName}`, shell(content));
+}
+
 /* ---------- convite de equipe ---------- */
 
 export async function sendTeamInvite(

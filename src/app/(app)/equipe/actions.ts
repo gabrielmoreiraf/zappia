@@ -9,23 +9,23 @@ import { db } from "@/db";
 import { teamInvites, users, type Client, type User } from "@/db/schema";
 import { getCurrentUser } from "@/lib/current-user";
 import { getCurrentClient } from "@/lib/current-client";
-import { isAdminEmail } from "@/lib/roles";
+import { capsFor, cleanPerms } from "@/lib/permissions";
 import { sendTeamInvite } from "@/lib/email";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 type Result = { ok: boolean; error?: string };
 
-async function ownerCtx(): Promise<{ user: User; client: Client } | null> {
+/** Quem tem a permissão "Equipe" gerencia usuários (o dono sempre tem). */
+async function teamCtx(): Promise<{ user: User; client: Client } | null> {
   const user = await getCurrentUser();
   const client = await getCurrentClient();
   if (!user || !client) return null;
-  const canManage = isAdminEmail(user.email) || user.role === "owner";
-  return canManage ? { user, client } : null;
+  return capsFor(user).team ? { user, client } : null;
 }
 
-/** Convida um funcionário por e-mail (link pra ele criar a própria senha). */
+/** Convida um funcionário por e-mail com as permissões escolhidas. */
 export async function inviteMember(formData: FormData): Promise<Result> {
-  const ctx = await ownerCtx();
+  const ctx = await teamCtx();
   if (!ctx) return { ok: false, error: "Sem permissão." };
   const { client } = ctx;
 
@@ -33,13 +33,14 @@ export async function inviteMember(formData: FormData): Promise<Result> {
     .toLowerCase()
     .trim();
   const name = String(formData.get("name") ?? "").trim();
-  const teamRole =
-    String(formData.get("teamRole") ?? "atendente") === "gerente"
-      ? "gerente"
-      : "atendente";
+  const permissions = cleanPerms(
+    String(formData.get("permissions") ?? "").split(","),
+  );
 
   if (!name) return { ok: false, error: "Informe o nome." };
   if (!EMAIL_RE.test(email)) return { ok: false, error: "E-mail inválido." };
+  if (permissions.length === 0)
+    return { ok: false, error: "Marque ao menos uma permissão." };
 
   const [existingUser] = await db
     .select({ clientId: users.clientId })
@@ -53,7 +54,6 @@ export async function inviteMember(formData: FormData): Promise<Result> {
     return { ok: false, error: "Esse e-mail já está em uso em outra conta." };
   }
 
-  // Substitui um convite pendente anterior para o mesmo e-mail.
   await db
     .delete(teamInvites)
     .where(
@@ -69,7 +69,7 @@ export async function inviteMember(formData: FormData): Promise<Result> {
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   const [invite] = await db
     .insert(teamInvites)
-    .values({ clientId: client.id, email, name, teamRole, tokenHash, expiresAt })
+    .values({ clientId: client.id, email, name, permissions, tokenHash, expiresAt })
     .returning({ id: teamInvites.id });
 
   const h = await headers();
@@ -90,8 +90,34 @@ export async function inviteMember(formData: FormData): Promise<Result> {
   return { ok: true };
 }
 
+/** Atualiza as permissões de um funcionário já existente. */
+export async function updateMemberPermissions(
+  userId: string,
+  permissions: string[],
+): Promise<Result> {
+  const ctx = await teamCtx();
+  if (!ctx) return { ok: false, error: "Sem permissão." };
+  const [target] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (!target || target.clientId !== ctx.client.id) {
+    return { ok: false, error: "Usuário não encontrado." };
+  }
+  if (target.role === "owner") {
+    return { ok: false, error: "O dono já tem acesso total." };
+  }
+  await db
+    .update(users)
+    .set({ permissions: cleanPerms(permissions) })
+    .where(eq(users.id, userId));
+  revalidatePath("/equipe");
+  return { ok: true };
+}
+
 export async function cancelInvite(inviteId: string): Promise<Result> {
-  const ctx = await ownerCtx();
+  const ctx = await teamCtx();
   if (!ctx) return { ok: false, error: "Sem permissão." };
   await db
     .delete(teamInvites)
@@ -103,7 +129,7 @@ export async function cancelInvite(inviteId: string): Promise<Result> {
 }
 
 export async function removeMember(userId: string): Promise<Result> {
-  const ctx = await ownerCtx();
+  const ctx = await teamCtx();
   if (!ctx) return { ok: false, error: "Sem permissão." };
   if (userId === ctx.user.id) {
     return { ok: false, error: "Você não pode remover a si mesmo." };

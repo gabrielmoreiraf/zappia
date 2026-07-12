@@ -35,9 +35,6 @@ export const leadStatusEnum = pgEnum("lead_status", [
   "matriculado",
 ]);
 export const userRoleEnum = pgEnum("user_role", ["owner", "member"]);
-// Papel do funcionário (só para members). Gerente = tudo menos marca/plano/
-// usuários; Atendente = conversas + leads.
-export const teamRoleEnum = pgEnum("team_role", ["gerente", "atendente"]);
 
 /* ---------- clients ---------- */
 
@@ -54,6 +51,11 @@ export const clients = pgTable("clients", {
   ownerEmail: text("owner_email"),
   businessDescription: text("business_description"),
   whatsappNumber: text("whatsapp_number"),
+  // Concierge: quando o cliente pede pra conectar o número (a equipe conecta na
+  // Meta por trás). null = ainda não pediu; preenchido = aguardando conexão.
+  whatsappRequestedAt: timestamp("whatsapp_requested_at", {
+    withTimezone: true,
+  }),
   // Usado pelo webhook (§5.2) para identificar o cliente pelo número de destino.
   whatsappPhoneId: text("whatsapp_phone_id").unique(),
   assistantName: text("assistant_name"),
@@ -163,8 +165,9 @@ export const users = pgTable("users", {
   name: text("name"),
   passwordHash: text("password_hash").notNull(),
   role: userRoleEnum("role").default("member").notNull(),
-  // Papel na equipe do cliente (só para funcionários convidados). null = dono.
-  teamRole: teamRoleEnum("team_role"),
+  // Permissões granulares do funcionário (chaves de permissions.ts). O dono
+  // (role owner) ignora isso — tem tudo.
+  permissions: text("permissions").array().default([]).notNull(),
   // Negócio do usuário-cliente (null para o admin e antes do onboarding).
   clientId: uuid("client_id").references(() => clients.id, {
     onDelete: "set null",
@@ -201,7 +204,7 @@ export const teamInvites = pgTable("team_invites", {
     .references(() => clients.id, { onDelete: "cascade" }),
   email: text("email").notNull(),
   name: text("name").notNull(),
-  teamRole: teamRoleEnum("team_role").notNull(),
+  permissions: text("permissions").array().default([]).notNull(),
   // bcrypt do "secret" que vai no link do convite (a parte após o id).
   tokenHash: text("token_hash").notNull(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),

@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { clients, teamInvites } from "@/db/schema";
-import { TEAM_ROLE_LABEL } from "@/lib/permissions";
+import { PERM_LABEL } from "@/lib/permissions";
 import { AcceptForm } from "./accept-form";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export default async function ConvitePage({
   let valid = false;
   let name = "";
   let businessName = "";
-  let roleLabel = "";
+  let perms: string[] = [];
 
   if (UUID_RE.test(id) && secret) {
     const [inv] = await db
@@ -39,7 +39,7 @@ export default async function ConvitePage({
     ) {
       valid = true;
       name = inv.name;
-      roleLabel = TEAM_ROLE_LABEL[inv.teamRole] ?? "";
+      perms = inv.permissions.map((k) => PERM_LABEL[k]).filter(Boolean);
       const [c] = await db
         .select({ name: clients.name })
         .from(clients)
@@ -64,7 +64,7 @@ export default async function ConvitePage({
             token={token}
             name={name}
             businessName={businessName}
-            roleLabel={roleLabel}
+            perms={perms}
           />
         ) : (
           <div>

@@ -6,20 +6,19 @@ import { db } from "@/db";
 import { clients, type Client } from "@/db/schema";
 import { getCurrentUser } from "@/lib/current-user";
 import { getCurrentClient } from "@/lib/current-client";
-import { isAdminEmail } from "@/lib/roles";
+import { capsFor } from "@/lib/permissions";
 
 type Result = { ok: boolean; error?: string };
 
 /** Verde padrão do Zappia — guardado como null (sem tema custom). */
 const DEFAULT_BRAND = "#10b981";
 
-/** Só o dono (usuário master) ou o admin da agência mexem na marca. */
+/** Quem tem a permissão de Personalização mexe na marca. */
 async function ownerClient(): Promise<Client | null> {
   const user = await getCurrentUser();
   const client = await getCurrentClient();
   if (!user || !client) return null;
-  const canManage = isAdminEmail(user.email) || user.role === "owner";
-  return canManage ? client : null;
+  return capsFor(user).branding ? client : null;
 }
 
 function refreshShell() {

@@ -12,7 +12,7 @@ export default async function ConhecimentoPage() {
   const user = await getCurrentUser();
   const client = await getCurrentClient();
   if (!user || !client) redirect("/clientes");
-  if (!capsFor(user).useAI) redirect("/dashboard");
+  if (!capsFor(user).ai) redirect("/dashboard");
   const items = parseKnowledgeBase(client.knowledgeBase);
 
   return (

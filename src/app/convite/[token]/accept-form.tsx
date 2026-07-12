@@ -14,12 +14,12 @@ export function AcceptForm({
   token,
   name,
   businessName,
-  roleLabel,
+  perms,
 }: {
   token: string;
   name: string;
   businessName: string;
-  roleLabel: string;
+  perms: string[];
 }) {
   const router = useRouter();
   const [next, setNext] = useState("");
@@ -45,11 +45,23 @@ export function AcceptForm({
   return (
     <div>
       <h1 className="text-lg font-bold text-slate-900 mb-1">Olá, {name}!</h1>
-      <p className="text-sm text-slate-500 mb-5">
+      <p className="text-sm text-slate-500 mb-3">
         Você foi convidado para o atendimento de{" "}
-        <span className="font-semibold text-slate-700">{businessName}</span>
-        {roleLabel ? ` como ${roleLabel}` : ""}. Crie uma senha pra entrar.
+        <span className="font-semibold text-slate-700">{businessName}</span>. Crie
+        uma senha pra entrar.
       </p>
+      {perms.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-5">
+          {perms.map((p) => (
+            <span
+              key={p}
+              className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700"
+            >
+              {p}
+            </span>
+          ))}
+        </div>
+      )}
       <form onSubmit={submit} className="space-y-4">
         <div className="grid gap-2">
           <Label>Nova senha</Label>

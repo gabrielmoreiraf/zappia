@@ -12,7 +12,7 @@ export default async function EquipePage() {
   const user = await getCurrentUser();
   const client = await getCurrentClient();
   if (!user || !client) redirect("/clientes");
-  if (!capsFor(user).manageAccount) redirect("/dashboard");
+  if (!capsFor(user).team) redirect("/dashboard");
 
   const members = await db
     .select({
@@ -20,7 +20,7 @@ export default async function EquipePage() {
       name: users.name,
       email: users.email,
       role: users.role,
-      teamRole: users.teamRole,
+      permissions: users.permissions,
       image: users.image,
     })
     .from(users)
@@ -31,7 +31,7 @@ export default async function EquipePage() {
       id: teamInvites.id,
       name: teamInvites.name,
       email: teamInvites.email,
-      teamRole: teamInvites.teamRole,
+      permissions: teamInvites.permissions,
       createdAt: teamInvites.createdAt,
     })
     .from(teamInvites)
