@@ -83,7 +83,7 @@ export default async function DashboardPage() {
                       {l.contactName ?? "Contato"}
                     </div>
                     <div className="text-xs text-slate-400 truncate">
-                      {l.courseInterest ?? "—"}
+                      {l.courseInterest ?? "-"}
                     </div>
                   </div>
                 </div>

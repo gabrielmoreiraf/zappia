@@ -2,8 +2,8 @@
  * Parser/serializer da base de conhecimento (§3 do prompt mestre).
  *
  * Decisão de modelagem (Fase 2/4): o `knowledge_base` markdown do client é a
- * fonte única de verdade. A tela "Base de cursos" (§4.6) é um editor sobre ele —
- * estas funções fazem o round-trip markdown ⇄ objeto.
+ * fonte única de verdade. A tela "Base de cursos" (§4.6) é um editor sobre ele.
+ * Estas funções fazem o round-trip markdown ⇄ objeto.
  */
 export interface Course {
   nome: string;
@@ -80,7 +80,7 @@ export interface CourseGroup {
   itens: Course[];
 }
 
-// Cores rotativas — categorias são livres (qualquer segmento), não fixas.
+// Cores rotativas: categorias são livres (qualquer segmento), não fixas.
 const GROUP_COLORS = ["emerald", "teal", "sky", "amber", "violet", "slate"];
 
 /** Agrupa os itens pela categoria informada pelo cliente, na ordem de aparição. */

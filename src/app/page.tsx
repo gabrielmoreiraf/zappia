@@ -51,7 +51,7 @@ const STEPS = [
   {
     n: "1",
     title: "Conecte seu WhatsApp",
-    desc: "Número oficial pela API da Meta — sem risco de banimento.",
+    desc: "Número oficial pela API da Meta, sem risco de banimento.",
   },
   {
     n: "2",
@@ -110,7 +110,7 @@ const FAQ = [
   },
   {
     q: "Serve pro meu segmento?",
-    a: "Sim. A Zappia funciona pra qualquer negócio — clínicas, lojas, cursos, serviços, depósitos e mais.",
+    a: "Sim. A Zappia funciona pra qualquer negócio: clínicas, lojas, cursos, serviços, depósitos e mais.",
   },
 ];
 
@@ -202,7 +202,7 @@ export default async function LandingPage() {
               className="mt-6 text-sm text-slate-500 animate-fade-up"
               style={{ animationDelay: "0.32s" }}
             >
-              Funciona pra qualquer segmento — clínicas, lojas, cursos, serviços e
+              Funciona pra qualquer segmento: clínicas, lojas, cursos, serviços e
               mais.
             </p>
           </div>
@@ -290,7 +290,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* API DA META — objeção "é de graça" */}
+      {/* API DA META: objeção "é de graça" */}
       <section className="mx-auto max-w-5xl px-4 py-20">
         <div className="text-center max-w-2xl mx-auto mb-12">
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">

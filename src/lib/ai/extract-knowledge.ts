@@ -44,7 +44,7 @@ interface RawItem {
 
 /**
  * Recebe um texto livre do dono do negócio e extrai os produtos/serviços/cursos
- * como itens estruturados da base. Não inventa nada — só o que está no texto.
+ * como itens estruturados da base. Não inventa nada: só o que está no texto.
  * Os itens voltam marcados `origem: "ia"` para revisão antes de salvar.
  */
 export async function extractCourses(

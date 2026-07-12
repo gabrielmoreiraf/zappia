@@ -9,7 +9,7 @@ import { sendText } from "@/lib/whatsapp";
 /**
  * Varre conversas paradas (cliente em silêncio há mais que o limite do cliente),
  * manda a mensagem de despedida e fecha. Conversas "novo" (aguardando humano) são
- * poupadas — ver getInactivityCandidates. Só encerra se a bola estava com o
+ * poupadas. Ver getInactivityCandidates. Só encerra se a bola estava com o
  * cliente (última mensagem foi NOSSA).
  *
  * É chamada de dois lugares: pelo cron (backstop diário no Hobby) e de carona no

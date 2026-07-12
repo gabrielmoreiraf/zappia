@@ -21,7 +21,7 @@ async function ctx(): Promise<{ user: User; client: Client } | null> {
 
 /**
  * Concierge: o cliente pede pra conectar o número. A gente guarda o número,
- * marca como "aguardando" e avisa o operador por e-mail — quem faz o setup na
+ * marca como "aguardando" e avisa o operador por e-mail. Quem faz o setup na
  * Meta é a equipe, não o cliente.
  */
 export async function requestWhatsappConnection(

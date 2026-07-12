@@ -95,7 +95,7 @@ export async function processInbound(
 
   // Aguardando atendimento humano: a IA NÃO improvisa. Manda a mensagem de
   // "alta demanda" (tranquiliza), mas só se faz um tempo desde a última resposta
-  // nossa — assim não repete a cada "oi?/eai?".
+  // nossa, assim não repete a cada "oi?/eai?".
   if (convo.status === "novo") {
     await touchConversation(convo.id, { incUnread: 1 });
     const waiting = client.waitingMessage?.trim();
@@ -174,7 +174,7 @@ export async function processInbound(
   });
 
   // 9. envia a resposta ao cliente final (não quebra o fluxo se a Meta não estiver
-  // conectada — a mensagem já está gravada).
+  // conectada, a mensagem já está gravada).
   if (output.reply) {
     try {
       await sendText(msg.phoneNumberId, msg.from, output.reply);

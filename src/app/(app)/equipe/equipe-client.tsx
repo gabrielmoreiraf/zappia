@@ -251,7 +251,7 @@ export function EquipeClient({
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-semibold text-slate-800 truncate flex items-center gap-1.5">
-                    {m.name ?? "—"}
+                    {m.name ?? "-"}
                     {m.id === currentUserId && (
                       <span className="text-[11px] text-slate-400">(você)</span>
                     )}

@@ -21,7 +21,7 @@ import { changePassword, saveAvatar, updateProfile } from "../profile-actions";
 
 /**
  * Recorta a imagem num quadrado centralizado e redimensiona no navegador.
- * Avatares são sempre círculos — sem isso, fotos não-quadradas (ex.: logos
+ * Avatares são sempre círculos. Sem isso, fotos não-quadradas (ex.: logos
  * retangulares) ficam esticadas dentro do círculo.
  */
 function resizeToDataUrl(file: File, size = 256): Promise<string> {
@@ -70,7 +70,7 @@ export function ProfileForm({
   const [pending, start] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // dados da conta — bloqueados até clicar no lápis
+  // dados da conta, bloqueados até clicar no lápis
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);

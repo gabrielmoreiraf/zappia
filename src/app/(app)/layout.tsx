@@ -7,7 +7,7 @@ import { capsFor } from "@/lib/permissions";
 import { MobileNav, Sidebar } from "./nav";
 import { Topbar } from "./topbar";
 
-// O painel reflete dados ao vivo do banco — nada de HTML estático em cache.
+// O painel reflete dados ao vivo do banco, nada de HTML estático em cache.
 export const dynamic = "force-dynamic";
 
 export default async function AppLayout({

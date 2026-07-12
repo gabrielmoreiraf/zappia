@@ -80,7 +80,7 @@ export function WhatsAppConnectionCard({
     );
   }
 
-  // 2) Solicitado — aguardando a equipe conectar
+  // 2) Solicitado: aguardando a equipe conectar
   if (requested) {
     return (
       <Card>
@@ -96,7 +96,7 @@ export function WhatsAppConnectionCard({
               Recebemos{" "}
               <span className="font-semibold text-slate-700">{number}</span>. Nossa
               equipe cuida da parte técnica com a Meta e te avisa por aqui quando
-              estiver pronto — costuma levar até 1 dia útil.
+              estiver pronto. Costuma levar até 1 dia útil.
             </p>
             <button
               onClick={trocar}
@@ -111,7 +111,7 @@ export function WhatsAppConnectionCard({
     );
   }
 
-  // 3) Ainda não pediu — formulário simples
+  // 3) Ainda não pediu: formulário simples
   return (
     <Card className="border-emerald-100">
       <CardContent className="flex flex-col md:flex-row gap-6 py-7">
@@ -124,7 +124,7 @@ export function WhatsAppConnectionCard({
           </h3>
           <p className="text-sm text-slate-500 mt-1">
             Você não precisa mexer em nada técnico. Passe o número que quer usar no
-            atendimento e a gente conecta pra você, com a API oficial da Meta — sem
+            atendimento e a gente conecta pra você, com a API oficial da Meta, sem
             risco de banimento.
           </p>
 
@@ -147,7 +147,7 @@ export function WhatsAppConnectionCard({
           <div className="flex items-start gap-2 mt-3 text-xs text-slate-400">
             <ShieldCheck size={13} className="text-emerald-500 shrink-0 mt-0.5" />
             <span>
-              Use um número dedicado ao atendimento — ao conectar, ele passa a
+              Use um número dedicado ao atendimento. Ao conectar, ele passa a
               responder pelo Zappia e não pelo WhatsApp do celular.
             </span>
           </div>

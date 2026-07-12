@@ -12,7 +12,7 @@ import {
   type NewMessage,
 } from "./schema";
 
-/** Identifica o cliente pelo número de destino (whatsapp_phone_id) — §5.2. */
+/** Identifica o cliente pelo número de destino (whatsapp_phone_id), §5.2. */
 export async function getClientByPhoneId(
   phoneId: string,
 ): Promise<Client | null> {
@@ -34,7 +34,7 @@ export async function messageExistsByWaId(waId: string): Promise<boolean> {
   return !!row;
 }
 
-/** Conversa por (cliente, contato) — cria se não existir. */
+/** Conversa por (cliente, contato): cria se não existir. */
 export async function getOrCreateConversation(
   clientId: string,
   contactPhone: string,

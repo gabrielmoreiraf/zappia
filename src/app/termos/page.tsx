@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Bot } from "lucide-react";
 
 export const metadata = {
-  title: "Termos de Uso — Zappia",
+  title: "Termos de Uso: Zappia",
 };
 
 export default function TermosPage() {

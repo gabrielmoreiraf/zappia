@@ -45,7 +45,7 @@ export function money(value: string | number | null | undefined): string {
 }
 
 export function tempoResposta(seg: number | null): string {
-  if (seg == null) return "—";
+  if (seg == null) return "-";
   if (seg < 60) return `${seg}s`;
   const min = Math.round(seg / 60);
   return `${min}min`;

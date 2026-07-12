@@ -7,7 +7,7 @@ import { env } from "@/lib/env";
 export const runtime = "nodejs";
 
 /**
- * GET — handshake de verificação do webhook da Meta.
+ * GET: handshake de verificação do webhook da Meta.
  * A Meta chama com hub.mode/hub.verify_token/hub.challenge.
  */
 export async function GET(req: Request) {
@@ -42,7 +42,7 @@ interface WhatsAppWebhookBody {
 }
 
 /**
- * POST — recebe eventos. Valida a assinatura, extrai as mensagens e roda o
+ * POST: recebe eventos. Valida a assinatura, extrai as mensagens e roda o
  * pipeline. Sempre responde 200 rápido (a Meta re-tenta em caso de erro; a
  * idempotência por waMessageId cobre reentregas).
  */

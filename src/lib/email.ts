@@ -108,10 +108,10 @@ export async function sendPasswordResetEmail(
       <table role="presentation" cellpadding="0" cellspacing="0"><tr>${digits}</tr></table>
     </td></tr>
     <tr><td style="padding:0 32px 28px;">
-      <p style="margin:0;color:#94a3b8;font-size:12px;line-height:1.6;">Se você não pediu isso, ignore este e-mail — sua senha continua a mesma.</p>
+      <p style="margin:0;color:#94a3b8;font-size:12px;line-height:1.6;">Se você não pediu isso, ignore este e-mail. Sua senha continua a mesma.</p>
     </td></tr>`;
 
-  await send(to, `${code} — redefinir sua senha Zappia`, shell(content));
+  await send(to, `${code}: redefinir sua senha Zappia`, shell(content));
 }
 
 /* ---------- concierge: solicitação de conexão do WhatsApp ---------- */
@@ -187,7 +187,7 @@ export async function sendLeadNotification(
     </td></tr>
     <tr><td style="padding:14px 32px 24px;">
       <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-        ${infoRow("Interesse", data.courseInterest || "—")}
+        ${infoRow("Interesse", data.courseInterest || "-")}
         ${infoRow("Canal", data.channel === "anuncio" ? "Anúncio" : "Orgânico")}
       </table>
     </td></tr>`;
@@ -235,5 +235,5 @@ export async function sendDailySummary(
         ${infoRow("Encaminhadas", String(data.handoffs))}
       </table>
     </td></tr>`;
-  await send(to, `Resumo diário — ${data.clientName}`, shell(content));
+  await send(to, `Resumo diário: ${data.clientName}`, shell(content));
 }

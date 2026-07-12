@@ -54,7 +54,7 @@ export function ConversasLive({
       setConvos(data.convos);
       setThread(data.thread);
     } catch {
-      // silencioso — tenta de novo no próximo ciclo
+      // silencioso, tenta de novo no próximo ciclo
     }
   }, [selectedId, q]);
 
@@ -99,7 +99,7 @@ export function ConversasLive({
         convos.map((c) => {
           const st = CONV_STATUS[c.status];
           const on = selectedId === c.id;
-          const preview = c.lastMessage?.text ?? "—";
+          const preview = c.lastMessage?.text ?? "-";
           return (
             <Link
               key={c.id}

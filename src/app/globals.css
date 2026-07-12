@@ -7,7 +7,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Zappia — identidade visual (fiel ao protótipo docs/Zappia.jsx):
+ * Zappia: identidade visual (fiel ao protótipo docs/Zappia.jsx):
  * branco, verde-esmeralda (emerald-500 = #10B981), tipografia Plus Jakarta Sans,
  * cantos arredondados, sem sombras pesadas. Tema claro apenas no v1.
  */
@@ -37,7 +37,7 @@ body {
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  /* Zappia — emerald-500 */
+  /* Zappia: emerald-500 */
   --primary: oklch(0.696 0.17 162.48);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
@@ -120,7 +120,7 @@ body {
   }
 }
 
-/* Landing — animações (mockup de chat + fundo) */
+/* Landing: animações (mockup de chat + fundo) */
 @keyframes bubble-in {
   from {
     opacity: 0;
@@ -181,7 +181,7 @@ body {
   animation: fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 /*
- * Toasts (sonner) — card branco, limpo, com ícone em selo colorido por tipo.
+ * Toasts (sonner): card branco, limpo, com ícone em selo colorido por tipo.
  * Substitui o visual "richColors" (bloco sólido) que ficava pesado.
  */
 .cn-toast {

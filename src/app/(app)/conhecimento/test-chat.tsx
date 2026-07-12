@@ -48,7 +48,7 @@ export function TestChat() {
         <Bot size={18} className="text-slate-700" />
         <h3 className="text-sm font-semibold text-slate-800">Teste sua IA</h3>
         <span className="text-xs text-slate-400 hidden sm:inline">
-          — pergunte algo e veja como ela responde com o que já sabe
+          Pergunte algo e veja como ela responde com o que já sabe
         </span>
         {msgs.length > 0 && (
           <button

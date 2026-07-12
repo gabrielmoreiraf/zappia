@@ -18,7 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID;
 const META_WA_CONFIG_ID = process.env.NEXT_PUBLIC_META_WA_CONFIG_ID;
 
-// Tipagem mínima do SDK do Facebook — só o que usamos aqui.
+// Tipagem mínima do SDK do Facebook, só o que usamos aqui.
 declare global {
   interface Window {
     FB?: {
@@ -95,7 +95,7 @@ export function WhatsAppConnectionCard({
       }
 
       // O SDK às vezes manda o payload já como objeto, às vezes como string
-      // JSON — trata os dois casos. (Log temporário pra depurar o onboarding.)
+      // JSON: trata os dois casos. (Log temporário pra depurar o onboarding.)
       let data: { type?: string; event?: string; data?: Record<string, string> };
       if (typeof event.data === "string") {
         try {
@@ -175,7 +175,7 @@ export function WhatsAppConnectionCard({
             setStatus((s) => {
               if (s === "waiting-popup") {
                 toast.error(
-                  "A Meta não confirmou a conexão. Tente de novo — se persistir, verifique se o popup foi bloqueado.",
+                  "A Meta não confirmou a conexão. Tente de novo. Se persistir, verifique se o popup foi bloqueado.",
                 );
                 return "idle";
               }
@@ -283,7 +283,7 @@ export function WhatsAppConnectionCard({
                 pelo Zappia).
               </li>
               <li>
-                O painel só mostra conversas a partir da conexão — a Meta
+                O painel só mostra conversas a partir da conexão. A Meta
                 não permite importar o histórico de mensagens anterior.
               </li>
             </ul>

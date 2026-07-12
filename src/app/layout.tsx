@@ -11,7 +11,7 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Zappia — Atendente de WhatsApp com IA",
+  title: "Zappia: Atendente de WhatsApp com IA",
   description:
     "Atendente de WhatsApp com IA: responde texto e áudio, treinado no conhecimento do seu negócio, sem inventar informação.",
 };

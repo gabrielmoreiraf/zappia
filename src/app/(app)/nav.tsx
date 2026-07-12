@@ -106,7 +106,7 @@ export function Sidebar({
   const sections = clientSections(caps);
   return (
     <aside className="hidden md:flex w-72 shrink-0 bg-white border-r border-slate-200 flex-col h-screen sticky top-0">
-      {/* Mesma altura da topbar — as bordas ficam alinhadas numa faixa só. */}
+      {/* Mesma altura da topbar: as bordas ficam alinhadas numa faixa só. */}
       <div className="h-16 shrink-0 flex items-center px-4 border-b border-slate-100">
         <Logo />
       </div>

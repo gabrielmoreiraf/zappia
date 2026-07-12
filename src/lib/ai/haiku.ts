@@ -5,8 +5,8 @@ import { buildSystemPrompt } from "./prompt";
 import { normalizeHaikuOutput, type HaikuOutput } from "./types";
 
 // §5 do prompt mestre: Haiku 4.5 é o modelo BASE (barato, rápido) e resolve a
-// maioria das mensagens. Quando o caso é complexo, escalamos pro Sonnet 5 —
-// mais capaz, mas ainda longe do custo do Opus — só nessa mensagem.
+// maioria das mensagens. Quando o caso é complexo, escalamos pro Sonnet 5,
+// mais capaz, mas ainda longe do custo do Opus, só nessa mensagem.
 const MODEL_FAST = "claude-haiku-4-5";
 const MODEL_SMART = process.env.AI_SMART_MODEL || "claude-sonnet-5";
 // Desligue o escalonamento com AI_ESCALATION=off (fica só no Haiku).
@@ -93,7 +93,7 @@ function extractJson(s: string): string {
 function fallbackOutput(): HaikuOutput {
   return {
     reply:
-      "Deixa eu confirmar isso certinho com a equipe pra não te passar nada errado — já te retorno por aqui, tá?",
+      "Deixa eu confirmar isso certinho com a equipe pra não te passar nada errado. Já te retorno por aqui, tá?",
     handoff: true,
     handoff_reason: "erro ao interpretar resposta da IA",
     lead_detected: false,
@@ -133,7 +133,7 @@ function shouldEscalate(parsed: unknown, output: HaikuOutput): boolean {
   // JSON ilegível → o modelo base se atrapalhou; tenta o mais forte.
   if (!parsed) return true;
   // Base incerta, mas SEM ser um handoff de "info não está na base" (aí o
-  // Sonnet também não teria a info — não adianta gastar). Escalamos os casos
+  // Sonnet também não teria a info, não adianta gastar). Escalamos os casos
   // genuinamente ambíguos, onde um modelo melhor dá uma resposta melhor.
   return output.confidence === "baixa" && !output.handoff;
 }

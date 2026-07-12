@@ -1,5 +1,5 @@
 /**
- * Zappia — schema Drizzle (§2 do build spec).
+ * Zappia: schema Drizzle (§2 do build spec).
  *
  * Multi-tenant: quase tudo pendura em `clients.id`. Toda query de dados de um
  * cliente filtra por client_id.
@@ -63,7 +63,7 @@ export const clients = pgTable("clients", {
   welcomeMessage: text("welcome_message"),
   handoffTriggers: text("handoff_triggers").array().default([]).notNull(),
   // Mensagem de "alta demanda" enviada quando o cliente insiste enquanto a
-  // conversa aguarda atendimento humano (não é gerada pela IA — texto fixo).
+  // conversa aguarda atendimento humano (não é gerada pela IA, texto fixo).
   waitingMessage: text("waiting_message")
     .default(
       "Estamos com bastante procura no momento, mas logo já retornamos por aqui. Obrigado pela paciência!",
@@ -84,7 +84,7 @@ export const clients = pgTable("clients", {
   plan: planEnum("plan").default("start").notNull(),
   monthlyFee: numeric("monthly_fee", { precision: 10, scale: 2 }),
   status: clientStatusEnum("status").default("active").notNull(),
-  // Notificações (§4.8 / Fase 7) — para onde e quando avisar o dono do negócio.
+  // Notificações (§4.8 / Fase 7): para onde e quando avisar o dono do negócio.
   notificationEmail: text("notification_email"),
   notifyNewLead: boolean("notify_new_lead").default(true).notNull(),
   notifyHandoff: boolean("notify_handoff").default(true).notNull(),
@@ -131,7 +131,7 @@ export const messages = pgTable("messages", {
   isAudio: boolean("is_audio").default(false).notNull(),
   courseMentioned: text("course_mentioned"),
   confidence: confidenceEnum("confidence"),
-  // ID da mensagem na Meta — idempotência do webhook (§5).
+  // ID da mensagem na Meta: idempotência do webhook (§5).
   waMessageId: text("wa_message_id").unique(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
@@ -166,7 +166,7 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   role: userRoleEnum("role").default("member").notNull(),
   // Permissões granulares do funcionário (chaves de permissions.ts). O dono
-  // (role owner) ignora isso — tem tudo.
+  // (role owner) ignora isso, tem tudo.
   permissions: text("permissions").array().default([]).notNull(),
   // Negócio do usuário-cliente (null para o admin e antes do onboarding).
   clientId: uuid("client_id").references(() => clients.id, {

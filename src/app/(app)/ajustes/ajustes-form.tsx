@@ -207,7 +207,7 @@ export function AjustesForm({
         </CardContent>
       </Card>
 
-      {/* Preview ao vivo — como fica no WhatsApp do cliente */}
+      {/* Preview ao vivo: como fica no WhatsApp do cliente */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Pré-visualização</CardTitle>
@@ -237,7 +237,7 @@ export function AjustesForm({
           <p className="text-xs text-muted-foreground mt-4">
             Tom selecionado:{" "}
             <span className="font-medium text-slate-600">{selTone}</span>. Isso
-            também molda como a IA responde durante toda a conversa — não só a
+            também molda como a IA responde durante toda a conversa, não só a
             mensagem de boas-vindas.
           </p>
         </CardContent>

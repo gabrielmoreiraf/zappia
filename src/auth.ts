@@ -6,7 +6,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 
 /**
- * Auth.js (v5) — login do sistema (admin/agência) contra a tabela `users`.
+ * Auth.js (v5): login do sistema (admin/agência) contra a tabela `users`.
  * Só entra quem já verificou o e-mail (emailVerifiedAt não nulo).
  */
 export const { handlers, auth, signIn, signOut } = NextAuth({

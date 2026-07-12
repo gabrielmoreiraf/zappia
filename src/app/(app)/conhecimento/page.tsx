@@ -19,7 +19,7 @@ export default async function ConhecimentoPage() {
     <div>
       <Header
         title="Base de conhecimento"
-        sub="É isso que a IA sabe sobre o negócio. Treine ela aqui — e teste na hora."
+        sub="É isso que a IA sabe sobre o negócio. Treine ela aqui e teste na hora."
       />
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">

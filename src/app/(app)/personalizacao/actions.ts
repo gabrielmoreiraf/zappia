@@ -10,7 +10,7 @@ import { capsFor } from "@/lib/permissions";
 
 type Result = { ok: boolean; error?: string };
 
-/** Verde padrão do Zappia — guardado como null (sem tema custom). */
+/** Verde padrão do Zappia, guardado como null (sem tema custom). */
 const DEFAULT_BRAND = "#10b981";
 
 /** Quem tem a permissão de Personalização mexe na marca. */

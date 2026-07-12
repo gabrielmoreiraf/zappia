@@ -1,7 +1,7 @@
 import Groq, { toFile } from "groq-sdk";
 import { env } from "./env";
 
-// §1 do build spec: transcrição via Groq — Whisper Large v3 Turbo.
+// §1 do build spec: transcrição via Groq: Whisper Large v3 Turbo.
 const MODEL = "whisper-large-v3-turbo";
 
 let _client: Groq | null = null;

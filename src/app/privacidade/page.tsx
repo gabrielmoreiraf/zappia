@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Bot } from "lucide-react";
 
 export const metadata = {
-  title: "Política de Privacidade — Zappia",
+  title: "Política de Privacidade: Zappia",
 };
 
 export default function PrivacidadePage() {
@@ -83,12 +83,12 @@ export default function PrivacidadePage() {
             que atuam como operadores dos dados, seguindo esta política:
           </p>
           <ul className="list-disc pl-5 space-y-1">
-            <li>Meta (WhatsApp Business Platform) — envio e recebimento das mensagens.</li>
-            <li>Anthropic (Claude) — geração das respostas da IA.</li>
-            <li>Groq — transcrição de mensagens de áudio.</li>
-            <li>Neon (Postgres) — armazenamento do banco de dados.</li>
-            <li>Resend — envio de e-mails transacionais (verificação de conta, notificações).</li>
-            <li>Vercel — hospedagem da aplicação.</li>
+            <li>Meta (WhatsApp Business Platform): envio e recebimento das mensagens.</li>
+            <li>Anthropic (Claude): geração das respostas da IA.</li>
+            <li>Groq: transcrição de mensagens de áudio.</li>
+            <li>Neon (Postgres): armazenamento do banco de dados.</li>
+            <li>Resend: envio de e-mails transacionais (verificação de conta, notificações).</li>
+            <li>Vercel: hospedagem da aplicação.</li>
           </ul>
         </section>
 

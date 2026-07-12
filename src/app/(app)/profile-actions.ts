@@ -75,7 +75,7 @@ export async function changePassword(
 
 /**
  * Salva a foto de perfil. A imagem já vem redimensionada e como data URL do
- * navegador — guardamos direto (funciona em qualquer ambiente, sem storage externo).
+ * navegador. Guardamos direto (funciona em qualquer ambiente, sem storage externo).
  */
 export async function saveAvatar(dataUrl: string): Promise<ActionResult> {
   const id = await currentUserId();

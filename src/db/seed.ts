@@ -1,5 +1,5 @@
 /**
- * Zappia — seed de desenvolvimento.
+ * Zappia: seed de desenvolvimento.
  *
  * Sem dados mock de negócio: cria apenas o usuário admin para conseguir logar.
  * Os clientes são criados de verdade pelo painel da agência.

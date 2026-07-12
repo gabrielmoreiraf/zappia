@@ -14,7 +14,7 @@ const SCRIPT: Bubble[] = [
   { from: "them", text: "Quero sim! Quanto custa a consulta?" },
   {
     from: "bot",
-    text: "Deixa eu confirmar certinho com a equipe pra não te passar nada errado — já te retorno! 🙌",
+    text: "Deixa eu confirmar certinho com a equipe pra não te passar nada errado. Já te retorno! 🙌",
   },
 ];
 

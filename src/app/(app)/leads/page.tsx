@@ -85,7 +85,7 @@ export default async function LeadsPage({
                   {l.contactName ?? "Contato"}
                 </div>
                 <div className="text-xs text-slate-400 truncate">
-                  {l.courseInterest ?? "—"}
+                  {l.courseInterest ?? "-"}
                 </div>
               </div>
               <div className="text-xs text-slate-400 w-20 hidden sm:block">

@@ -1,7 +1,7 @@
 /**
  * Papéis do Zappia.
  *
- * O admin master (dono do Zappia) é APENAS este e-mail — todo o resto que se
+ * O admin master (dono do Zappia) é APENAS este e-mail. Todo o resto que se
  * cadastra é cliente (dono de um negócio que contratou o Zappia).
  */
 export const ADMIN_EMAIL = "gabrielfmoreira4@gmail.com";
