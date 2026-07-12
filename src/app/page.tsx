@@ -78,6 +78,19 @@ const WITH = [
   "Nunca inventa informação",
 ];
 
+const META_ALONE = [
+  "Não responde ninguém — só transporta a mensagem",
+  "Não tem painel nem tela pra você usar",
+  "Exige um programador e um servidor rodando 24/7",
+  "Não conhece seu negócio nem captura leads",
+];
+const ZAPPIA_INSTEAD = [
+  "IA que responde sozinha, 24 horas por dia",
+  "Painel com todas as conversas em tempo real",
+  "Você só passa o número — o resto é com a gente",
+  "Base de conhecimento e leads capturados sozinha",
+];
+
 const FAQ = [
   {
     q: "Preciso saber programar?",
@@ -274,6 +287,59 @@ export default async function LandingPage() {
               ))}
             </ul>
           </Card>
+        </div>
+      </section>
+
+      {/* API DA META — objeção "é de graça" */}
+      <section className="mx-auto max-w-5xl px-4 py-20">
+        <div className="text-center max-w-2xl mx-auto mb-12">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
+            <ShieldCheck size={13} /> A dúvida mais comum
+          </span>
+          <h2 className="mt-5 text-3xl font-bold">
+            “Mas a API da Meta não é de graça?”
+          </h2>
+          <p className="mt-3 text-slate-600">
+            É sim — e a Zappia roda em cima dela. Só que a API sozinha é apenas o
+            cano por onde a mensagem passa. Quem transforma isso em atendimento de
+            verdade é a Zappia.
+          </p>
+        </div>
+
+        <div className="rounded-3xl border border-slate-200 overflow-hidden grid md:grid-cols-2">
+          <div className="bg-slate-50 p-7 sm:p-8">
+            <h3 className="font-semibold text-slate-500">A API da Meta, sozinha</h3>
+            <ul className="mt-4 space-y-2.5">
+              {META_ALONE.map((w) => (
+                <li key={w} className="flex items-start gap-2 text-sm text-slate-600">
+                  <X size={16} className="text-red-400 mt-0.5 shrink-0" /> {w}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="bg-emerald-50/50 p-7 sm:p-8 border-t md:border-t-0 md:border-l border-slate-200">
+            <h3 className="font-semibold text-emerald-700">Com a Zappia</h3>
+            <ul className="mt-4 space-y-2.5">
+              {ZAPPIA_INSTEAD.map((w) => (
+                <li key={w} className="flex items-start gap-2 text-sm text-slate-700">
+                  <Check size={16} className="text-emerald-500 mt-0.5 shrink-0" /> {w}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-2xl bg-slate-900 text-white px-6 py-6 flex items-start sm:items-center gap-3">
+          <Sparkles size={20} className="text-emerald-400 shrink-0 mt-0.5 sm:mt-0" />
+          <p className="text-sm sm:text-base">
+            <span className="font-semibold">
+              O “de graça” da Meta é a matéria-prima.
+            </span>{" "}
+            <span className="text-slate-300">
+              A Zappia é o produto pronto — atende, organiza e vende por você, sem
+              precisar de programador.
+            </span>
+          </p>
         </div>
       </section>
 
