@@ -79,7 +79,7 @@ const WITH = [
 ];
 
 const META_ALONE = [
-  "Não responde ninguém — só transporta a mensagem",
+  "Não responde ninguém, só transporta a mensagem",
   "Não tem painel nem tela pra você usar",
   "Exige um programador e um servidor rodando 24/7",
   "Não conhece seu negócio nem captura leads",
@@ -87,7 +87,7 @@ const META_ALONE = [
 const ZAPPIA_INSTEAD = [
   "IA que responde sozinha, 24 horas por dia",
   "Painel com todas as conversas em tempo real",
-  "Você só passa o número — o resto é com a gente",
+  "Você só passa o número. O resto é com a gente",
   "Base de conhecimento e leads capturados sozinha",
 ];
 
@@ -300,7 +300,7 @@ export default async function LandingPage() {
             “Mas a API da Meta não é de graça?”
           </h2>
           <p className="mt-3 text-slate-600">
-            É sim — e a Zappia roda em cima dela. Só que a API sozinha é apenas o
+            É sim, e a Zappia roda em cima dela. Só que a API sozinha é apenas o
             cano por onde a mensagem passa. Quem transforma isso em atendimento de
             verdade é a Zappia.
           </p>
@@ -336,7 +336,7 @@ export default async function LandingPage() {
               O “de graça” da Meta é a matéria-prima.
             </span>{" "}
             <span className="text-slate-300">
-              A Zappia é o produto pronto — atende, organiza e vende por você, sem
+              A Zappia é o produto pronto: atende, organiza e vende por você, sem
               precisar de programador.
             </span>
           </p>
