@@ -1,5 +1,6 @@
 import { processInbound, type InboundMessage } from "@/lib/pipeline";
 import { verifySignature } from "@/lib/whatsapp";
+import { sweepInactive } from "@/lib/inactivity";
 import { env } from "@/lib/env";
 
 // Precisa do runtime Node (crypto, Buffer, SDKs).
@@ -84,6 +85,14 @@ export async function POST(req: Request) {
         }
       }
     }
+  }
+
+  // De carona no tráfego: encerra conversas paradas sem depender de cron
+  // (o Hobby não roda cron a cada 15 min). Não deixa falhar a resposta do webhook.
+  try {
+    await sweepInactive();
+  } catch (err) {
+    console.error("[webhook] sweepInactive falhou:", err);
   }
 
   return new Response("EVENT_RECEIVED", { status: 200 });
