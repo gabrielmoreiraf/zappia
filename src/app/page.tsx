@@ -69,29 +69,37 @@ const WITHOUT = [
   "Atendimento lento e cliente esperando",
   "Leads perdidos fora do horário",
   "Equipe sobrecarregada no WhatsApp",
-  "Respostas erradas ou inventadas",
+  "Conversas espalhadas, sem histórico nem controle",
 ];
 const WITH = [
   "Responde na hora, 24 horas por dia",
   "Todo lead capturado e organizado",
   "Equipe focada no que importa",
-  "Nunca inventa informação",
+  "Tudo no painel, com as regras que você define",
 ];
 
-const META_ALONE = [
-  "Não responde ninguém, só transporta a mensagem",
-  "Não tem painel nem tela pra você usar",
-  "Exige um programador e um servidor rodando 24/7",
-  "Não conhece seu negócio nem captura leads",
+const META_AI = [
+  "A conversa fica na Meta: sem funil de leads, sem histórico seu, sem exportar",
+  "A cobrança é por uso: quanto mais o cliente fala, maior a conta",
+  "As regras e o modelo são da Meta, não seus",
+  "Ninguém treina, ajusta nem acompanha as conversas por você",
 ];
-const ZAPPIA_INSTEAD = [
-  "IA que responde sozinha, 24 horas por dia",
-  "Painel com todas as conversas em tempo real",
-  "Você só passa o número. O resto é com a gente",
-  "Base de conhecimento e leads capturados sozinha",
+const ZAPPIA_AI = [
+  "Painel seu: conversas, leads em funil e exportação quando quiser",
+  "Preço fixo por mês, sem susto na fatura",
+  "Você define o que a IA pode afirmar e quando chamar um humano",
+  "A gente conecta, treina junto e acompanha o resultado",
 ];
 
 const FAQ = [
+  {
+    q: "O WhatsApp já tem a IA da Meta. Por que a Zappia?",
+    a: "A IA da Meta responde bem, e a Zappia não tenta substituir isso. A diferença é o que fica com você: na Meta, a conversa e os dados ficam por lá, a cobrança é por uso e ninguém ajusta o atendimento pra você. Na Zappia, o histórico e os leads ficam no seu painel, você define as regras da IA e a mensalidade é fixa.",
+  },
+  {
+    q: "Vou receber uma fatura variável no fim do mês?",
+    a: "Não. A mensalidade é fixa e já inclui o atendimento com IA, em texto e áudio. Você sabe quanto vai pagar antes de o mês começar, mesmo que o movimento aumente.",
+  },
   {
     q: "Preciso saber programar?",
     a: "Não. Você conecta o WhatsApp, cadastra as informações do seu negócio e a IA começa a atender.",
@@ -290,27 +298,27 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* API DA META: objeção "é de graça" */}
+      {/* IA DA META: objeção "já tenho IA no WhatsApp" */}
       <section className="mx-auto max-w-5xl px-4 py-20">
         <div className="text-center max-w-2xl mx-auto mb-12">
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
             <ShieldCheck size={13} /> A dúvida mais comum
           </span>
           <h2 className="mt-5 text-3xl font-bold">
-            “Mas a API da Meta não é de graça?”
+            “O WhatsApp já não tem a IA da Meta?”
           </h2>
           <p className="mt-3 text-slate-600">
-            É sim, e a Zappia roda em cima dela. Só que a API sozinha é apenas o
-            cano por onde a mensagem passa. Quem transforma isso em atendimento de
-            verdade é a Zappia.
+            Tem, e ela responde bem. A Zappia não briga com isso. A diferença está
+            no que acontece em volta da conversa: onde ficam seus leads, quem
+            define as regras do atendimento e quanto você paga no fim do mês.
           </p>
         </div>
 
         <div className="rounded-3xl border border-slate-200 overflow-hidden grid md:grid-cols-2">
           <div className="bg-slate-50 p-7 sm:p-8">
-            <h3 className="font-semibold text-slate-500">A API da Meta, sozinha</h3>
+            <h3 className="font-semibold text-slate-500">Usando só a IA da Meta</h3>
             <ul className="mt-4 space-y-2.5">
-              {META_ALONE.map((w) => (
+              {META_AI.map((w) => (
                 <li key={w} className="flex items-start gap-2 text-sm text-slate-600">
                   <X size={16} className="text-red-400 mt-0.5 shrink-0" /> {w}
                 </li>
@@ -320,7 +328,7 @@ export default async function LandingPage() {
           <div className="bg-emerald-50/50 p-7 sm:p-8 border-t md:border-t-0 md:border-l border-slate-200">
             <h3 className="font-semibold text-emerald-700">Com a Zappia</h3>
             <ul className="mt-4 space-y-2.5">
-              {ZAPPIA_INSTEAD.map((w) => (
+              {ZAPPIA_AI.map((w) => (
                 <li key={w} className="flex items-start gap-2 text-sm text-slate-700">
                   <Check size={16} className="text-emerald-500 mt-0.5 shrink-0" /> {w}
                 </li>
@@ -332,12 +340,10 @@ export default async function LandingPage() {
         <div className="mt-4 rounded-2xl bg-slate-900 text-white px-6 py-6 flex items-start sm:items-center gap-3">
           <Sparkles size={20} className="text-emerald-400 shrink-0 mt-0.5 sm:mt-0" />
           <p className="text-sm sm:text-base">
-            <span className="font-semibold">
-              O “de graça” da Meta é a matéria-prima.
-            </span>{" "}
+            <span className="font-semibold">A IA da Meta responde bem.</span>{" "}
             <span className="text-slate-300">
-              A Zappia é o produto pronto: atende, organiza e vende por você, sem
-              precisar de programador.
+              A Zappia cuida do resto: seus leads organizados, o atendimento
+              seguindo as suas regras e um preço que não muda no fim do mês.
             </span>
           </p>
         </div>
