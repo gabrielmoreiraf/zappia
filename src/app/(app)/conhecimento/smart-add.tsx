@@ -69,7 +69,7 @@ export function SmartAdd() {
         rows={3}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Ex.: Tenho curso de Excel avançado por R$ 390, presencial. Também dou informática básica pra iniciantes. E faço manutenção de computador a partir de R$ 80."
+        placeholder="Ex.: Vendo bolo de pote por R$ 12, sabor chocolate e morango. Também faço encomenda de bolo de aniversário sob consulta. Entrega em até 24h na região."
         className="bg-white"
       />
       <div className="mt-3">

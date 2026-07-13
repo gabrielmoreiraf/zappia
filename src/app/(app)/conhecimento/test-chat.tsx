@@ -15,7 +15,7 @@ interface Msg {
 const SUGESTOES = [
   "Oi, o que vocês oferecem?",
   "Quanto custa?",
-  "Tem curso de informática?",
+  "Vocês têm isso disponível agora?",
 ];
 
 export function TestChat() {

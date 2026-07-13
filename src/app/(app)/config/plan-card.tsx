@@ -8,6 +8,7 @@ import {
   Check,
   Copy,
   CreditCard,
+  Infinity as InfinityIcon,
   QrCode,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -40,12 +41,14 @@ export function PlanCard({
   paymentMethod,
   lastInvoiceUrl,
   cpfCnpj,
+  lifetimeAccess,
 }: {
   subscriptionStatus: SubscriptionStatus;
   subscriptionDueDate: Date | null;
   paymentMethod: string | null;
   lastInvoiceUrl: string | null;
   cpfCnpj: string | null;
+  lifetimeAccess?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -62,6 +65,38 @@ export function PlanCard({
         toast.error(res.error ?? "Falha ao cancelar.");
       }
     });
+  }
+
+  if (lifetimeAccess) {
+    return (
+      <Card className="h-full flex flex-col border-violet-200 bg-gradient-to-br from-violet-50 to-white">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Plano {PLAN_NAME}</CardTitle>
+            <Badge variant="secondary" className="bg-violet-100 text-violet-700">
+              <InfinityIcon size={12} /> Vitalício
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">Assinatura e pagamento.</p>
+        </CardHeader>
+        <CardContent className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 py-6">
+            <span className="w-14 h-14 rounded-2xl bg-violet-100 text-violet-600 flex items-center justify-center">
+              <InfinityIcon size={26} />
+            </span>
+            <div>
+              <div className="text-sm font-semibold text-slate-800">
+                Acesso vitalício
+              </div>
+              <p className="text-xs text-slate-500 mt-1 max-w-xs">
+                Você tem acesso vitalício ao Zappia: sem mensalidade, sem cobrança,
+                pra sempre.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

@@ -2,13 +2,16 @@
  * Parser/serializer da base de conhecimento (§3 do prompt mestre).
  *
  * Decisão de modelagem (Fase 2/4): o `knowledge_base` markdown do client é a
- * fonte única de verdade. A tela "Base de cursos" (§4.6) é um editor sobre ele.
- * Estas funções fazem o round-trip markdown ⇄ objeto.
+ * fonte única de verdade. A tela "Base de conhecimento" (§4.6) é um editor
+ * sobre ele. Estas funções fazem o round-trip markdown ⇄ objeto.
+ *
+ * Genérico pra qualquer ramo (mercado, clínica, loja, curso, depósito etc.):
+ * "categoria" é livre, definida pelo próprio cliente, nunca fixa.
  */
 export interface Course {
   nome: string;
   status: "confirmado" | "confirmar_com_equipe";
-  categoria: string; // Presencial | Técnico | EAD | Informática
+  categoria: string; // livre: definida pelo cliente, qualquer ramo
   valor?: string;
   cargaHoraria?: string;
   observacao?: string;
@@ -46,9 +49,10 @@ export function parseKnowledgeBase(md: string | null | undefined): Course[] {
       nome: header,
       status:
         fields.status === "confirmado" ? "confirmado" : "confirmar_com_equipe",
-      categoria: fields.categoria || "Presencial",
+      categoria: fields.categoria || "Geral",
       valor: fields.valor || undefined,
-      cargaHoraria: fields.carga_horaria || undefined,
+      // "detalhe" é a chave atual; "carga_horaria" fica pra ler itens antigos.
+      cargaHoraria: fields.detalhe || fields.carga_horaria || undefined,
       observacao: fields.observacao || undefined,
       ativo: fields.ativo ? fields.ativo.toLowerCase() !== "false" : true,
       origem: fields.origem === "ia" ? "ia" : undefined,
@@ -65,7 +69,7 @@ export function serializeKnowledgeBase(courses: Course[]): string {
       lines.push(`- categoria: ${c.categoria}`);
       // §3: omitir valor quando status = confirmar_com_equipe.
       if (c.status === "confirmado" && c.valor) lines.push(`- valor: ${c.valor}`);
-      lines.push(`- carga_horária: ${c.cargaHoraria || "a confirmar"}`);
+      if (c.cargaHoraria) lines.push(`- detalhe: ${c.cargaHoraria}`);
       if (c.observacao) lines.push(`- observação: ${c.observacao}`);
       if (c.origem === "ia") lines.push(`- origem: ia`);
       lines.push(`- ativo: ${c.ativo ? "true" : "false"}`);

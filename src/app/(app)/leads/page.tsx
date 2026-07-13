@@ -13,7 +13,7 @@ const FILTERS = [
   { key: "", label: "Todos" },
   { key: "novo", label: "Novos" },
   { key: "contato", label: "Em contato" },
-  { key: "matriculado", label: "Matriculados" },
+  { key: "matriculado", label: "Convertidos" },
 ] as const;
 
 const CHANNEL_LABEL: Record<string, string> = {

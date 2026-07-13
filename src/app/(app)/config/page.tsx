@@ -46,6 +46,7 @@ export default async function ConfigPage() {
           paymentMethod={client.paymentMethod}
           lastInvoiceUrl={client.lastInvoiceUrl}
           cpfCnpj={client.cpfCnpj}
+          lifetimeAccess={client.lifetimeAccess}
         />
 
         <NotificationsCard

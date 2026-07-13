@@ -36,7 +36,7 @@ export function LeadStatusSelect({
       <SelectContent>
         <SelectItem value="novo">Novo</SelectItem>
         <SelectItem value="contato">Em contato</SelectItem>
-        <SelectItem value="matriculado">Matriculado</SelectItem>
+        <SelectItem value="matriculado">Convertido</SelectItem>
       </SelectContent>
     </Select>
   );

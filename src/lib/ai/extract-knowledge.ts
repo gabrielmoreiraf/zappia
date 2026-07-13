@@ -54,15 +54,15 @@ export async function extractCourses(
   const t = text.trim();
   if (!t) return [];
 
-  const system = `Você organiza a base de conhecimento de ${businessName}. Recebe um texto livre do dono do negócio e extrai os PRODUTOS, SERVIÇOS ou CURSOS citados como itens estruturados.
+  const system = `Você organiza a base de conhecimento de ${businessName}, um negócio que pode ser de qualquer ramo (loja, mercado, clínica, curso, oficina, e-commerce, restaurante, prestador de serviço, etc.). Recebe um texto livre do dono do negócio e extrai os PRODUTOS, SERVIÇOS ou ITENS citados como itens estruturados.
 
 Regras:
-- Um item por produto/serviço/curso distinto. NÃO invente nada que não esteja no texto.
+- Um item por produto/serviço distinto. NÃO invente nada que não esteja no texto.
 - "nome": nome curto e claro do item.
-- "categoria": agrupe por tipo (ex.: "Informática", "Saúde", "Serviços", "Produtos"). Se não der pra inferir, use "Geral". Use a MESMA categoria para itens do mesmo tipo.
+- "categoria": agrupe pelo tipo real do negócio descrito no texto (ex.: "Bebidas", "Consultas", "Cortes de cabelo", "Peças", "Cursos", o que fizer sentido pro ramo). Se não der pra inferir, use "Geral". Use a MESMA categoria para itens do mesmo tipo.
 - "valor": só preencha se o texto disser um preço explícito (ex.: "R$ 390"); senão null.
 - "status": "confirmado" só quando houver preço/dado concreto no texto; caso contrário "confirmar_com_equipe".
-- "observacao": um detalhe curto e útil se houver (ex.: "presencial", "entrega em 24h", "semipresencial"); senão null.
+- "observacao": um detalhe curto e útil se houver (ex.: "entrega em 24h", "só sob encomenda", "duração de 1h"); senão null.
 - Se o texto não tiver nenhum item claro, devolva { "itens": [] }.`;
 
   const resp = await anthropic().messages.create({

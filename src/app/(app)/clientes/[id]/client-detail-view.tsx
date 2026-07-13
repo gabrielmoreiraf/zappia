@@ -9,6 +9,7 @@ import {
   CreditCard,
   Gift,
   History,
+  Infinity as InfinityIcon,
   LogIn,
   QrCode,
   Receipt,
@@ -33,6 +34,7 @@ import type { ClientDetail } from "@/db/agency";
 import { enterClient } from "../../agency-actions";
 import {
   toggleClientStatus,
+  toggleLifetimeAccess,
   grantFreeMonths,
   generateOneOffCharge,
 } from "./actions";
@@ -103,6 +105,29 @@ export function ClientDetailView({ detail }: { detail: ClientDetail }) {
     });
   }
 
+  function toggleLifetime() {
+    const turningOn = !client.lifetimeAccess;
+    if (
+      !confirm(
+        turningOn
+          ? "Dar acesso vitalício? Esse cliente para de precisar de assinatura."
+          : "Remover o acesso vitalício? O cliente volta a precisar assinar um plano.",
+      )
+    )
+      return;
+    start(async () => {
+      const res = await toggleLifetimeAccess(client.id);
+      if (res.ok) {
+        toast.success(
+          turningOn ? "Acesso vitalício liberado!" : "Acesso vitalício removido.",
+        );
+        router.refresh();
+      } else {
+        toast.error(res.error ?? "Falha ao atualizar.");
+      }
+    });
+  }
+
   function submitFree(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const n = Number(months);
@@ -164,44 +189,96 @@ export function ClientDetailView({ detail }: { detail: ClientDetail }) {
 
       <div className="grid gap-5 lg:grid-cols-2">
         {/* Assinatura e pagamento */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center justify-between">
-              Assinatura e pagamento
-              <Badge variant="secondary" className={subInfo.tone}>
-                {subInfo.label}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2.5">
-            <Row icon={Calendar} label="Cliente desde">
-              {dateLong(client.subscriptionStartedAt ?? client.createdAt)}
-            </Row>
-            <Row icon={Receipt} label="Último pagamento">
-              {client.lastPaymentAt ? dateLong(client.lastPaymentAt) : "Nenhum ainda"}
-            </Row>
-            <Row icon={Calendar} label="Próxima cobrança">
-              {client.subscriptionDueDate ? dateLong(client.subscriptionDueDate) : "-"}
-            </Row>
-            <Row icon={client.paymentMethod === "PIX" ? QrCode : CreditCard} label="Forma de pagamento">
-              {client.paymentMethod ? PAYMENT_LABEL[client.paymentMethod] ?? client.paymentMethod : "-"}
-            </Row>
-            {client.freeMonthsGranted > 0 && (
-              <Row icon={Gift} label="Meses grátis">
-                {client.freeMonthsRemaining} restando de {client.freeMonthsGranted} dados
+        {client.lifetimeAccess ? (
+          <Card className="border-violet-200 bg-gradient-to-br from-violet-50 to-white">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center justify-between">
+                Assinatura e pagamento
+                <Badge variant="secondary" className="bg-violet-100 text-violet-700">
+                  <InfinityIcon size={12} /> Vitalício
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-start gap-3 rounded-xl bg-white border border-violet-100 px-3.5 py-3">
+                <span className="w-9 h-9 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center shrink-0">
+                  <InfinityIcon size={18} />
+                </span>
+                <div>
+                  <div className="text-sm font-semibold text-slate-800">
+                    Acesso vitalício
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    Sem mensalidade, sem cobrança. O atendimento fica sempre ativo.
+                  </div>
+                </div>
+              </div>
+              <Row icon={Calendar} label="Cliente desde">
+                {dateLong(client.subscriptionStartedAt ?? client.createdAt)}
               </Row>
-            )}
 
-            <div className="flex flex-wrap gap-2 pt-2">
-              <Button variant="outline" size="sm" onClick={() => setFreeOpen(true)}>
-                <Gift size={14} /> Liberar meses grátis
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setChargeOpen(true)}>
-                <Receipt size={14} /> Gerar cobrança avulsa
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+              <div className="pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-violet-700 hover:text-violet-800"
+                  onClick={toggleLifetime}
+                  disabled={pending}
+                >
+                  <InfinityIcon size={14} /> Remover acesso vitalício
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center justify-between">
+                Assinatura e pagamento
+                <Badge variant="secondary" className={subInfo.tone}>
+                  {subInfo.label}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2.5">
+              <Row icon={Calendar} label="Cliente desde">
+                {dateLong(client.subscriptionStartedAt ?? client.createdAt)}
+              </Row>
+              <Row icon={Receipt} label="Último pagamento">
+                {client.lastPaymentAt ? dateLong(client.lastPaymentAt) : "Nenhum ainda"}
+              </Row>
+              <Row icon={Calendar} label="Próxima cobrança">
+                {client.subscriptionDueDate ? dateLong(client.subscriptionDueDate) : "-"}
+              </Row>
+              <Row icon={client.paymentMethod === "PIX" ? QrCode : CreditCard} label="Forma de pagamento">
+                {client.paymentMethod ? PAYMENT_LABEL[client.paymentMethod] ?? client.paymentMethod : "-"}
+              </Row>
+              {client.freeMonthsGranted > 0 && (
+                <Row icon={Gift} label="Meses grátis">
+                  {client.freeMonthsRemaining} restando de {client.freeMonthsGranted} dados
+                </Row>
+              )}
+
+              <div className="flex flex-wrap gap-2 pt-2">
+                <Button variant="outline" size="sm" onClick={() => setFreeOpen(true)}>
+                  <Gift size={14} /> Liberar meses grátis
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setChargeOpen(true)}>
+                  <Receipt size={14} /> Gerar cobrança avulsa
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-violet-700 hover:text-violet-800"
+                  onClick={toggleLifetime}
+                  disabled={pending}
+                >
+                  <InfinityIcon size={14} /> Dar acesso vitalício
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Custo estimado */}
         <Card>

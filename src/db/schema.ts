@@ -131,6 +131,9 @@ export const clients = pgTable("clients", {
   // Crédito de meses grátis dado pelo admin (§ liberar acesso sem cobrar).
   freeMonthsGranted: integer("free_months_granted").default(0).notNull(),
   freeMonthsRemaining: integer("free_months_remaining").default(0).notNull(),
+  // Acesso vitalício (sem plano, sem cobrança) — dado pelo admin, ex.: contas
+  // internas da própria Zappia. Quando true, some com preço/cobrança na tela.
+  lifetimeAccess: boolean("lifetime_access").default(false).notNull(),
   // Dedupe do lembrete de "pagamento chegando": guarda a due date já avisada.
   lastReminderDueDate: timestamp("last_reminder_due_date", {
     withTimezone: true,

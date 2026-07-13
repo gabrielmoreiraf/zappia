@@ -50,7 +50,7 @@ export const CONV_STATUS: Record<string, { label: string; cls: string }> = {
 export const LEAD_STATUS: Record<string, { label: string; cls: string }> = {
   novo: { label: "Novo", cls: "bg-amber-100 text-amber-700" },
   contato: { label: "Em contato", cls: "bg-sky-100 text-sky-700" },
-  matriculado: { label: "Matriculado", cls: "bg-emerald-100 text-emerald-700" },
+  matriculado: { label: "Convertido", cls: "bg-emerald-100 text-emerald-700" },
 };
 
 export function Avatar({ text }: { text: string }) {

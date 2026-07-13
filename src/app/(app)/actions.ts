@@ -221,14 +221,14 @@ export async function saveBusinessHours(formData: FormData) {
   revalidatePath("/config");
 }
 
-/* ---------- Base de cursos (§4.6) ---------- */
+/* ---------- Base de conhecimento (§4.6) ---------- */
 
 async function writeCourses(clientId: string, courses: Course[]) {
   await db
     .update(clients)
     .set({ knowledgeBase: serializeKnowledgeBase(courses) })
     .where(eq(clients.id, clientId));
-  revalidatePath("/cursos");
+  revalidatePath("/conhecimento");
 }
 
 export async function toggleCourse(nome: string) {
@@ -258,7 +258,7 @@ export async function upsertCourse(formData: FormData) {
   const course: Course = {
     nome,
     status,
-    categoria: String(formData.get("categoria") ?? "Presencial").trim(),
+    categoria: String(formData.get("categoria") ?? "Geral").trim(),
     valor: String(formData.get("valor") ?? "").trim() || undefined,
     cargaHoraria: String(formData.get("cargaHoraria") ?? "").trim() || undefined,
     observacao: String(formData.get("observacao") ?? "").trim() || undefined,

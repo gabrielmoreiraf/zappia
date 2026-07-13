@@ -15,7 +15,7 @@ export async function GET() {
   }
   const rows = await getLeads(client.id);
 
-  const header = ["Nome", "Curso de interesse", "Canal", "Status", "Data"];
+  const header = ["Nome", "Interesse", "Canal", "Status", "Data"];
   const lines = [header.join(",")];
   for (const l of rows) {
     lines.push(

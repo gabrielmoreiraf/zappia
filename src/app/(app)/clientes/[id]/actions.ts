@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { clients } from "@/db/schema";
 import { getCurrentUser } from "@/lib/current-user";
@@ -71,6 +71,44 @@ export async function grantFreeMonths(
       freeMonthsRemaining: client.freeMonthsRemaining + months,
     })
     .where(eq(clients.id, clientId));
+
+  revalidatePath(`/clientes/${clientId}`);
+  return { ok: true };
+}
+
+/**
+ * Liga/desliga acesso vitalício (sem plano, sem cobrança). Ligando: reativa o
+ * cliente, marca assinatura em dia e some com data de próxima cobrança.
+ * Desligando: volta a exigir assinatura normal (subscription_status "none").
+ */
+export async function toggleLifetimeAccess(clientId: string): Promise<Result> {
+  if (!(await requireAdmin())) return { ok: false, error: "Sem permissão." };
+
+  const [client] = await db
+    .select({ lifetimeAccess: clients.lifetimeAccess })
+    .from(clients)
+    .where(eq(clients.id, clientId))
+    .limit(1);
+  if (!client) return { ok: false, error: "Cliente não encontrado." };
+
+  if (client.lifetimeAccess) {
+    await db
+      .update(clients)
+      .set({ lifetimeAccess: false, subscriptionStatus: "none" })
+      .where(eq(clients.id, clientId));
+  } else {
+    await db
+      .update(clients)
+      .set({
+        lifetimeAccess: true,
+        status: "active",
+        subscriptionStatus: "active",
+        subscriptionDueDate: null,
+        monthlyFee: null,
+        subscriptionStartedAt: sql`coalesce(${clients.subscriptionStartedAt}, now())`,
+      })
+      .where(eq(clients.id, clientId));
+  }
 
   revalidatePath(`/clientes/${clientId}`);
   return { ok: true };
