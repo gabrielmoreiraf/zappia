@@ -1,5 +1,6 @@
 "use server";
 
+import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -9,10 +10,16 @@ import { createVerificationCode, checkVerificationCode } from "@/lib/verificatio
 import { sendPasswordResetEmail, sendVerificationEmail } from "@/lib/email";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const AUTO_LOGIN_TTL_MS = 2 * 60_000;
 
 export interface ActionResult {
   ok: boolean;
   error?: string;
+}
+
+export interface VerifyEmailResult extends ActionResult {
+  userId?: string;
+  autoLoginToken?: string;
 }
 
 /** Cria a conta (não verificada) e dispara o código de 6 dígitos por e-mail. */
@@ -71,22 +78,32 @@ export async function signUp(formData: FormData): Promise<ActionResult> {
   return { ok: true };
 }
 
-/** Confirma o código e ativa a conta. */
+/**
+ * Confirma o código e ativa a conta. Gera junto um token de uso único (curta
+ * duração) pra logar automaticamente na sequência, sem pedir a senha nem
+ * passar pelo /login: o cadastro é um fluxo só, sem interrupção.
+ */
 export async function verifyEmail(
   email: string,
   code: string,
-): Promise<ActionResult> {
+): Promise<VerifyEmailResult> {
   const e = email.toLowerCase().trim();
   const c = code.replace(/\D/g, "");
   if (c.length !== 6) return { ok: false, error: "Digite os 6 dígitos." };
 
   const result = await checkVerificationCode(e, c);
   if (result === "ok") {
-    await db
+    const token = crypto.randomBytes(24).toString("hex");
+    const [u] = await db
       .update(users)
-      .set({ emailVerifiedAt: new Date() })
-      .where(eq(users.email, e));
-    return { ok: true };
+      .set({
+        emailVerifiedAt: new Date(),
+        autoLoginToken: bcrypt.hashSync(token, 10),
+        autoLoginTokenExpiresAt: new Date(Date.now() + AUTO_LOGIN_TTL_MS),
+      })
+      .where(eq(users.email, e))
+      .returning({ id: users.id });
+    return { ok: true, userId: u.id, autoLoginToken: token };
   }
 
   const messages: Record<string, string> = {

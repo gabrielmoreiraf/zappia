@@ -159,7 +159,7 @@ export default async function LandingPage() {
                   <Link href="/login">Entrar</Link>
                 </Button>
                 <Button asChild>
-                  <Link href="/cadastro">Começar grátis</Link>
+                  <Link href="/cadastro">Começar agora</Link>
                 </Button>
               </>
             )}
@@ -198,7 +198,7 @@ export default async function LandingPage() {
             >
               <Button asChild size="lg">
                 <Link href={loggedIn ? "/dashboard" : "/cadastro"}>
-                  Começar grátis <ArrowRight size={16} />
+                  Começar agora <ArrowRight size={16} />
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline">
@@ -409,7 +409,7 @@ export default async function LandingPage() {
           </p>
           <Button asChild size="lg" variant="secondary" className="mt-7 bg-white text-emerald-700 hover:bg-emerald-50">
             <Link href={loggedIn ? "/dashboard" : "/cadastro"}>
-              Começar grátis <ArrowRight size={16} />
+              Começar agora <ArrowRight size={16} />
             </Link>
           </Button>
         </div>

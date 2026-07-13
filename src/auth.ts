@@ -42,6 +42,45 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         };
       },
     }),
+    // Login automático logo após verificar o e-mail no cadastro (fluxo único,
+    // sem voltar pro /login). Token de uso único e curta duração, gerado por
+    // verifyEmail em (auth)/actions.ts.
+    Credentials({
+      id: "signup-auto",
+      credentials: {
+        userId: { label: "userId", type: "text" },
+        token: { label: "token", type: "text" },
+      },
+      authorize: async (creds) => {
+        const userId = String(creds?.userId ?? "");
+        const token = String(creds?.token ?? "");
+        if (!userId || !token) return null;
+
+        const [u] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1);
+        if (!u || !u.emailVerifiedAt) return null;
+        if (!u.autoLoginToken || !u.autoLoginTokenExpiresAt) return null;
+        if (u.autoLoginTokenExpiresAt.getTime() < Date.now()) return null;
+        if (!bcrypt.compareSync(token, u.autoLoginToken)) return null;
+
+        // Uso único: limpa o token pra não dar pra reaproveitar.
+        await db
+          .update(users)
+          .set({ autoLoginToken: null, autoLoginTokenExpiresAt: null })
+          .where(eq(users.id, userId));
+
+        return {
+          id: u.id,
+          email: u.email,
+          name: u.name ?? undefined,
+          role: u.role,
+          isAdmin: u.isAdmin,
+        };
+      },
+    }),
   ],
   callbacks: {
     jwt({ token, user }) {

@@ -261,6 +261,13 @@ export const users = pgTable("users", {
   plan: text("plan").default("free").notNull(),
   // null enquanto não confirmou o código de 6 dígitos.
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+  // Token de uso único (hash) pra logar automaticamente logo após verificar o
+  // e-mail no cadastro, sem pedir a senha de novo. Curta duração, limpo no
+  // primeiro uso (ver provider "signup-auto" em auth.ts).
+  autoLoginToken: text("auto_login_token"),
+  autoLoginTokenExpiresAt: timestamp("auto_login_token_expires_at", {
+    withTimezone: true,
+  }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -52,8 +53,26 @@ export function VerifyForm() {
     setInfo(null);
     start(async () => {
       const res = await verifyEmail(email, code);
-      if (res.ok) router.push("/login?verified=1");
-      else setError(res.error ?? "Não foi possível verificar.");
+      if (!res.ok) {
+        setError(res.error ?? "Não foi possível verificar.");
+        return;
+      }
+      // Cadastro é um fluxo só: loga automaticamente e continua (o layout
+      // do painel manda pro onboarding sozinho). Só cai no /login se o
+      // login automático falhar por algum motivo.
+      if (res.userId && res.autoLoginToken) {
+        const signInRes = await signIn("signup-auto", {
+          userId: res.userId,
+          token: res.autoLoginToken,
+          redirect: false,
+        });
+        if (!signInRes?.error) {
+          router.push("/dashboard");
+          router.refresh();
+          return;
+        }
+      }
+      router.push("/login?verified=1");
     });
   }
 

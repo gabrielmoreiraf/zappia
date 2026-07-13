@@ -35,6 +35,10 @@ const OVERDUE = new Set(["PAYMENT_OVERDUE"]);
 const CANCELED = new Set([
   "PAYMENT_DELETED",
   "SUBSCRIPTION_DELETED",
+  // Nome real na API da Asaas (confirmado na tela de eventos do webhook);
+  // "SUBSCRIPTION_CANCELED" não existe lá, mas mantemos por segurança caso
+  // apareça em alguma versão antiga.
+  "SUBSCRIPTION_INACTIVATED",
   "SUBSCRIPTION_CANCELED",
 ]);
 
