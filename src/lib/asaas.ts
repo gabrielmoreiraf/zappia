@@ -163,3 +163,128 @@ export async function createOneOffCharge(data: {
     }),
   });
 }
+
+/* ------------------------------------------------------------------------
+ * Pix Automático (BACEN): débito recorrente com autorização do pagador,
+ * separado do modelo de "assinatura" normal (que a Asaas gerencia sozinha).
+ * Aqui a APLICAÇÃO é responsável por criar a cobrança de cada ciclo dentro
+ * da janela de 2 a 10 dias úteis antes do vencimento, e por disparar cada
+ * retentativa manualmente (ver docs.asaas.com/docs/pix-automatico-implementacao
+ * e .../pix-automático-processo-de-retentativas-jornada-3-api).
+ * ------------------------------------------------------------------------ */
+
+export type PixAutomaticStatus = "CREATED" | "ACTIVE" | "CANCELLED" | "REFUSED" | "EXPIRED";
+
+export interface AsaasPixAutomaticAuthorization {
+  id: string;
+  status: PixAutomaticStatus;
+  customerId: string;
+  frequency: string;
+  value: number | null;
+  payload: string | null; // QR Code (copia-e-cola) do débito autorizado + 1ª cobrança
+  encodedImage: string | null; // QR Code em base64
+  immediateQrCode: { conciliationIdentifier: string; expirationDate: string } | null;
+  // A Asaas cria uma "assinatura" interna pra agrupar as cobranças dessa
+  // autorização — os webhooks de pagamento (PAYMENT_CONFIRMED/OVERDUE) vêm com
+  // esse mesmo subscription id, então guardamos pra reaproveitar o mesmo
+  // tratamento que já existe pra assinatura de cartão (ver webhook/asaas).
+  subscriptionId: string | null;
+}
+
+/**
+ * Cria a autorização com a 1ª cobrança embutida no mesmo QR Code: o pagador
+ * escaneia uma vez só e autoriza tanto o pagamento imediato quanto o débito
+ * dos próximos ciclos.
+ */
+export async function createPixAutomaticAuthorization(data: {
+  customerId: string;
+  value: number;
+  description: string;
+  startDate: string; // YYYY-MM-DD
+}): Promise<AsaasPixAutomaticAuthorization> {
+  return asaasFetch<AsaasPixAutomaticAuthorization>("/pix/automatic/authorizations", {
+    method: "POST",
+    body: JSON.stringify({
+      frequency: "MONTHLY",
+      contractId: data.customerId, // 1 contrato por cliente (identificador nosso, não é ID da Asaas)
+      startDate: data.startDate,
+      value: data.value,
+      description: data.description,
+      customerId: data.customerId,
+      paymentCreationMode: "MANUAL",
+      retryPolicy: "ALLOW_THREE_IN_SEVEN_DAYS",
+      immediateQrCode: {
+        expirationSeconds: 3600,
+        originalValue: data.value,
+        description: data.description,
+      },
+    }),
+  });
+}
+
+export async function getPixAutomaticAuthorization(
+  id: string,
+): Promise<AsaasPixAutomaticAuthorization> {
+  return asaasFetch<AsaasPixAutomaticAuthorization>(`/pix/automatic/authorizations/${id}`);
+}
+
+export async function cancelPixAutomaticAuthorization(id: string): Promise<void> {
+  await asaasFetch(`/pix/automatic/authorizations/${id}`, { method: "DELETE" });
+}
+
+/** Cria a cobrança de um ciclo (mensal) referenciando a autorização já ativa. */
+export async function createPixAutomaticCharge(data: {
+  customerId: string;
+  authorizationId: string;
+  value: number;
+  description: string;
+  dueDate: string; // YYYY-MM-DD
+}): Promise<AsaasPayment> {
+  return asaasFetch<AsaasPayment>("/payments", {
+    method: "POST",
+    body: JSON.stringify({
+      customer: data.customerId,
+      billingType: "PIX",
+      value: data.value,
+      dueDate: data.dueDate,
+      description: data.description,
+      pixAutomaticAuthorizationId: data.authorizationId,
+    }),
+  });
+}
+
+export interface AsaasPixAutomaticPaymentInstruction {
+  id: string; // id da instrução (diferente do pay_... do payment)
+  paymentId: string;
+  dueDate: string;
+  status: "AWAITING_REQUEST" | "SCHEDULED" | "DONE" | "CANCELLED" | "REFUSED";
+  purpose: "SCHEDULE" | "RETRY_AFTER_DUE_DATE";
+  retryAttempt: number;
+}
+
+/** Lista as instruções (recurso próprio da Asaas, id diferente do payment) de uma autorização. */
+export async function listPixAutomaticInstructions(
+  authorizationId: string,
+  status?: AsaasPixAutomaticPaymentInstruction["status"],
+): Promise<AsaasPixAutomaticPaymentInstruction[]> {
+  const qs = new URLSearchParams({ authorizationId, ...(status ? { status } : {}) });
+  const res = await asaasFetch<{ data: AsaasPixAutomaticPaymentInstruction[] }>(
+    `/pix/automatic/paymentInstructions?${qs.toString()}`,
+  );
+  return res.data;
+}
+
+/**
+ * Dispara uma retentativa (dia seguinte a uma recusa). Precisa ser enviada
+ * até 23h59 do dia anterior à data pedida; máx. 3 tentativas em 7 dias
+ * corridos a partir do vencimento original.
+ */
+export async function retryPixAutomaticInstruction(
+  instructionId: string,
+  dueDate: string, // YYYY-MM-DD
+): Promise<void> {
+  await asaasFetch(`/pix/automatic/paymentInstructions/${instructionId}/retries`, {
+    method: "POST",
+    body: JSON.stringify({ dueDate }),
+  });
+}

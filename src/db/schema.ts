@@ -122,6 +122,18 @@ export const clients = pgTable("clients", {
   paymentMethod: text("payment_method"),
   // Link da fatura em aberto (pra "pagar agora" quando pending/overdue).
   lastInvoiceUrl: text("last_invoice_url"),
+  // Pix Automático (BACEN): autorização de débito recorrente, separada da
+  // assinatura normal (cartão). A Asaas NÃO cria a cobrança de cada mês
+  // sozinha aqui — o cron (api/cron/pix-automatico) que cria, dentro da
+  // janela de 2 a 10 dias úteis antes do vencimento (ver asaas.ts).
+  pixAutomaticAuthorizationId: text("pix_automatic_authorization_id"),
+  // Espelha o status literal da Asaas: CREATED | ACTIVE | CANCELLED | REFUSED | EXPIRED.
+  pixAutomaticStatus: text("pix_automatic_status"),
+  // Vencimento da próxima cobrança a criar (o cron usa isso pra saber quando agir).
+  pixNextChargeDue: timestamp("pix_next_charge_due", { withTimezone: true }),
+  // Quantas retentativas já foram disparadas pra cobrança atual (máx. 3, ver
+  // "Processo de retentativas Jornada 3" da Asaas). Zera a cada cobrança nova.
+  pixRetryAttempt: integer("pix_retry_attempt").default(0).notNull(),
   // Primeira vez que a assinatura ficou "active" (pra mostrar "cliente desde").
   subscriptionStartedAt: timestamp("subscription_started_at", {
     withTimezone: true,

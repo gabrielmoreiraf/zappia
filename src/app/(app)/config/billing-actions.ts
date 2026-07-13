@@ -14,6 +14,7 @@ import {
   createSubscription,
   getLatestSubscriptionPayment,
   getPixQrCode,
+  cancelPixAutomaticAuthorization,
   cancelSubscription as asaasCancelSubscription,
 } from "@/lib/asaas";
 
@@ -30,9 +31,13 @@ async function ctx(): Promise<{ user: User; client: Client } | null> {
 }
 
 function tomorrowISODate(): string {
+  return tomorrow().toISOString().slice(0, 10);
+}
+
+function tomorrow(): Date {
   const d = new Date();
   d.setDate(d.getDate() + 1);
-  return d.toISOString().slice(0, 10);
+  return d;
 }
 
 function onlyDigits(s: string): string {
@@ -53,7 +58,15 @@ async function ensureAsaasCustomer(
   return customer.id;
 }
 
-/** Assina via Pix: devolve o QR Code pra gente renderizar no próprio modal. */
+/**
+ * Assina via Pix recorrente simples: todo ciclo a Asaas gera uma cobrança
+ * Pix nova (o cliente escaneia de novo). O Pix Automático de verdade (débito
+ * autorizado uma vez, sem escanear todo mês) já está implementado em
+ * asaas.ts/webhook/cron, mas fica esperando a Asaas liberar o recurso pra
+ * essa conta (retornou 403 "sem permissão", precisa pedir ao gerente de
+ * contas) — quando liberar, é só trocar essa função pra usar
+ * createPixAutomaticAuthorization de novo.
+ */
 export async function subscribeWithPix(cpfCnpjRaw: string): Promise<PixResult> {
   const c = await ctx();
   if (!c) return { ok: false, error: "Sem permissão." };
@@ -87,6 +100,7 @@ export async function subscribeWithPix(cpfCnpjRaw: string): Promise<PixResult> {
         asaasCustomerId,
         asaasSubscriptionId: subscription.id,
         subscriptionStatus: "pending",
+        paymentMethod: "PIX",
         lastInvoiceUrl: payment.invoiceUrl,
       })
       .where(eq(clients.id, c.client.id));
@@ -95,7 +109,10 @@ export async function subscribeWithPix(cpfCnpjRaw: string): Promise<PixResult> {
     return { ok: true, qrCodeImage: qr.encodedImage, copyPaste: qr.payload };
   } catch (err) {
     console.error("[subscribeWithPix] falhou:", err);
-    return { ok: false, error: "Não foi possível gerar o Pix. Tente de novo." };
+    // TODO(debug temporário): expõe o erro real da Asaas pra diagnosticar a
+    // falha em produção; reverter pra mensagem genérica assim que resolver.
+    const detail = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: `Não foi possível gerar o Pix. Detalhe: ${detail}` };
   }
 }
 
@@ -187,9 +204,11 @@ export async function subscribeWithCard(
     return { ok: true };
   } catch (err) {
     console.error("[subscribeWithCard] falhou:", err);
+    // TODO(debug temporário): expõe o erro real da Asaas; reverter assim que resolver.
+    const detail = err instanceof Error ? err.message : String(err);
     return {
       ok: false,
-      error: "Não foi possível processar o cartão. Confira os dados e tente de novo.",
+      error: `Não foi possível processar o cartão. Detalhe: ${detail}`,
     };
   }
 }
@@ -203,16 +222,20 @@ export async function getSubscriptionStatus(): Promise<{
   return { status: c.client.subscriptionStatus };
 }
 
-/** Cancela a assinatura ativa. Pausa o atendimento da IA junto. */
+/** Cancela a assinatura ativa (cartão ou Pix Automático). Pausa a IA junto. */
 export async function cancelSubscription(): Promise<Result> {
   const c = await ctx();
   if (!c) return { ok: false, error: "Sem permissão." };
-  if (!c.client.asaasSubscriptionId) {
+  if (!c.client.asaasSubscriptionId && !c.client.pixAutomaticAuthorizationId) {
     return { ok: false, error: "Não há assinatura ativa." };
   }
 
   try {
-    await asaasCancelSubscription(c.client.asaasSubscriptionId);
+    if (c.client.pixAutomaticAuthorizationId) {
+      await cancelPixAutomaticAuthorization(c.client.pixAutomaticAuthorizationId);
+    } else if (c.client.asaasSubscriptionId) {
+      await asaasCancelSubscription(c.client.asaasSubscriptionId);
+    }
     await db
       .update(clients)
       .set({ subscriptionStatus: "canceled", status: "paused" })

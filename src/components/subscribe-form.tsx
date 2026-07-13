@@ -11,6 +11,7 @@ import {
   subscribeWithCard,
   getSubscriptionStatus,
 } from "@/app/(app)/config/billing-actions";
+import { PLAN_PRICE_LABEL } from "@/lib/plan";
 
 type Method = "card" | "pix";
 type PixData = { qrCodeImage: string; copyPaste: string };
@@ -121,6 +122,12 @@ export function SubscribeForm({
           onClick={() => setMethod("pix")}
         />
       </div>
+
+      <p className="text-xs text-slate-400 mt-3 leading-relaxed">
+        {method === "card"
+          ? `Ao assinar, você autoriza a cobrança automática de ${PLAN_PRICE_LABEL} todo mês no cartão informado, até cancelar.`
+          : `Ao assinar, você concorda com a cobrança de ${PLAN_PRICE_LABEL} todo mês via Pix, até cancelar. A cada ciclo você recebe um novo código Pix pra pagar.`}
+      </p>
 
       {method === "card" ? (
         <form onSubmit={submitCard} className="space-y-3 mt-3">

@@ -14,11 +14,15 @@ export default async function AssinarPage() {
   const client = await getCurrentClient();
   if (!client) redirect("/bem-vindo");
 
-  const liberado =
-    client.lifetimeAccess ||
-    client.subscriptionStatus === "active" ||
-    client.subscriptionStatus === "overdue";
+  const liberado = client.lifetimeAccess || client.subscriptionStatus === "active";
   if (liberado) redirect("/dashboard");
 
-  return <AssinarView clientName={client.name} cpfCnpj={client.cpfCnpj} />;
+  return (
+    <AssinarView
+      clientName={client.name}
+      cpfCnpj={client.cpfCnpj}
+      subscriptionStatus={client.subscriptionStatus}
+      lastInvoiceUrl={client.lastInvoiceUrl}
+    />
+  );
 }

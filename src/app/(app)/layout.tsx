@@ -23,15 +23,9 @@ export default async function AppLayout({
   const client = await getCurrentClient();
   // Cliente sem negócio ainda → onboarding.
   if (!isAdmin && !client) redirect("/bem-vindo");
-  // Painel só libera com pagamento confirmado (ou vitalício). "overdue" segue
-  // liberado (carência, ver webhook/asaas) — só "none"/"pending"/"canceled" bloqueiam.
-  if (
-    !isAdmin &&
-    client &&
-    !client.lifetimeAccess &&
-    client.subscriptionStatus !== "active" &&
-    client.subscriptionStatus !== "overdue"
-  ) {
+  // Painel só libera com pagamento confirmado (ou vitalício). Se não descontou
+  // ("overdue") ou nunca pagou, bloqueia até regularizar (ver webhook/asaas).
+  if (!isAdmin && client && !client.lifetimeAccess && client.subscriptionStatus !== "active") {
     redirect("/assinar");
   }
 
