@@ -93,3 +93,13 @@ export async function saveAvatar(dataUrl: string): Promise<ActionResult> {
   revalidatePath("/perfil");
   return { ok: true };
 }
+
+/** Remove a foto de perfil (volta pro círculo com as iniciais). */
+export async function removeAvatar(): Promise<ActionResult> {
+  const id = await currentUserId();
+  if (!id) return { ok: false, error: "Sessão expirada." };
+
+  await db.update(users).set({ image: null }).where(eq(users.id, id));
+  revalidatePath("/perfil");
+  return { ok: true };
+}

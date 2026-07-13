@@ -21,6 +21,16 @@ import {
 
 export const planEnum = pgEnum("plan", ["start", "pro"]);
 export const clientStatusEnum = pgEnum("client_status", ["active", "paused"]);
+// Espelha o status da assinatura no Asaas. "none" = nunca assinou (cliente
+// antigo/manual, sem cobrança). "pending" = assinatura criada, 1ª fatura em
+// aberto. Ver src/app/api/webhook/asaas/route.ts para as transições.
+export const subscriptionStatusEnum = pgEnum("subscription_status", [
+  "none",
+  "pending",
+  "active",
+  "overdue",
+  "canceled",
+]);
 export const conversationStatusEnum = pgEnum("conversation_status", [
   "ia",
   "novo",
@@ -77,6 +87,19 @@ export const clients = pgTable("clients", {
       "Como ficamos um tempinho sem falar, vou encerrar nosso atendimento por aqui. Se precisar de qualquer coisa, é só me chamar de novo!",
     )
     .notNull(),
+  // Horário de atendimento: quando ativado, a IA só responde dentro da janela
+  // configurada. Fora dela, manda uma única mensagem avisando e a conversa vira
+  // "novo" (aguardando humano) até o expediente voltar. Desligado = 24h (padrão).
+  businessHoursEnabled: boolean("business_hours_enabled")
+    .default(false)
+    .notNull(),
+  // JSON por dia da semana: {"mon":{"enabled":true,"start":"08:00","end":"18:00"},...}
+  businessHours: text("business_hours"),
+  outOfHoursMessage: text("out_of_hours_message")
+    .default(
+      "No momento estamos fora do nosso horário de atendimento. Assim que o expediente começar, alguém da nossa equipe vai te responder por aqui. Obrigado pela paciência!",
+    )
+    .notNull(),
   // true assim que o cliente salvar os Ajustes da IA ao menos uma vez (tutorial).
   aiConfigured: boolean("ai_configured").default(false).notNull(),
   // Markdown estruturado (§3 do prompt mestre), injetado no prompt com caching.
@@ -84,6 +107,34 @@ export const clients = pgTable("clients", {
   plan: planEnum("plan").default("start").notNull(),
   monthlyFee: numeric("monthly_fee", { precision: 10, scale: 2 }),
   status: clientStatusEnum("status").default("active").notNull(),
+  // Cobrança (Asaas). cpfCnpj é exigido pela Asaas pra criar o cliente lá.
+  cpfCnpj: text("cpf_cnpj"),
+  asaasCustomerId: text("asaas_customer_id"),
+  asaasSubscriptionId: text("asaas_subscription_id"),
+  subscriptionStatus: subscriptionStatusEnum("subscription_status")
+    .default("none")
+    .notNull(),
+  // Vencimento da próxima cobrança (informado pela Asaas via webhook).
+  subscriptionDueDate: timestamp("subscription_due_date", {
+    withTimezone: true,
+  }),
+  // "PIX" | "CREDIT_CARD" | "BOLETO" — vem do billingType do último pagamento.
+  paymentMethod: text("payment_method"),
+  // Link da fatura em aberto (pra "pagar agora" quando pending/overdue).
+  lastInvoiceUrl: text("last_invoice_url"),
+  // Primeira vez que a assinatura ficou "active" (pra mostrar "cliente desde").
+  subscriptionStartedAt: timestamp("subscription_started_at", {
+    withTimezone: true,
+  }),
+  // Último pagamento confirmado (espelha payment_events, mas rápido de ler).
+  lastPaymentAt: timestamp("last_payment_at", { withTimezone: true }),
+  // Crédito de meses grátis dado pelo admin (§ liberar acesso sem cobrar).
+  freeMonthsGranted: integer("free_months_granted").default(0).notNull(),
+  freeMonthsRemaining: integer("free_months_remaining").default(0).notNull(),
+  // Dedupe do lembrete de "pagamento chegando": guarda a due date já avisada.
+  lastReminderDueDate: timestamp("last_reminder_due_date", {
+    withTimezone: true,
+  }),
   // Notificações (§4.8 / Fase 7): para onde e quando avisar o dono do negócio.
   notificationEmail: text("notification_email"),
   notifyNewLead: boolean("notify_new_lead").default(true).notNull(),
@@ -115,6 +166,12 @@ export const conversations = pgTable(
     // mensagem do cliente zera isso e reabre a conversa (status → "ia").
     closedAt: timestamp("closed_at", { withTimezone: true }),
     unreadCount: integer("unread_count").default(0).notNull(),
+    // Já mandamos a mensagem de "fora do expediente" nessa janela fora do
+    // horário? Evita repetir a cada mensagem nova do contato; zera quando o
+    // expediente volta.
+    outOfHoursNotified: boolean("out_of_hours_notified")
+      .default(false)
+      .notNull(),
   },
   (t) => [unique("conversations_client_contact_uq").on(t.clientId, t.contactPhone)],
 );
@@ -157,6 +214,21 @@ export const leads = pgTable("leads", {
     .notNull(),
 });
 
+/* ---------- respostas rápidas ("/" no chat, como no WhatsApp Business) ---------- */
+
+export const quickReplies = pgTable("quick_replies", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  clientId: uuid("client_id")
+    .notNull()
+    .references(() => clients.id, { onDelete: "cascade" }),
+  // Atalho digitado depois da "/" no chat (ex.: "boleto" → "/boleto").
+  shortcut: text("shortcut").notNull(),
+  message: text("message").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 /* ---------- users (login do sistema / admin) ---------- */
 
 export const users = pgTable("users", {
@@ -168,6 +240,10 @@ export const users = pgTable("users", {
   // Permissões granulares do funcionário (chaves de permissions.ts). O dono
   // (role owner) ignora isso, tem tudo.
   permissions: text("permissions").array().default([]).notNull(),
+  // Administrador da agência Zappia (vê /clientes e /faturamento, entra como
+  // qualquer cliente). Substitui o antigo e-mail fixo; agora vários usuários
+  // podem ser admin, via convite (ver adminInvites).
+  isAdmin: boolean("is_admin").default(false).notNull(),
   // Negócio do usuário-cliente (null para o admin e antes do onboarding).
   clientId: uuid("client_id").references(() => clients.id, {
     onDelete: "set null",
@@ -214,6 +290,78 @@ export const teamInvites = pgTable("team_invites", {
     .notNull(),
 });
 
+/* ---------- convites de administrador (agência Zappia) ---------- */
+
+export const adminInvites = pgTable("admin_invites", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: text("email").notNull(),
+  name: text("name").notNull(),
+  // bcrypt do "secret" que vai no link do convite (a parte após o id).
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+  invitedByEmail: text("invited_by_email"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+/* ---------- convites de cliente (dono de um novo negócio) ---------- */
+
+export const clientInvites = pgTable("client_invites", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  clientId: uuid("client_id")
+    .notNull()
+    .references(() => clients.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  name: text("name").notNull(),
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+  invitedByEmail: text("invited_by_email"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+/* ---------- LGPD: registro de acesso do admin a um cliente ---------- */
+
+export const clientAccessLog = pgTable("client_access_log", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  adminUserId: uuid("admin_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  adminEmail: text("admin_email").notNull(),
+  clientId: uuid("client_id")
+    .notNull()
+    .references(() => clients.id, { onDelete: "cascade" }),
+  reason: text("reason").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+/* ---------- histórico de eventos de pagamento (Asaas) ---------- */
+
+export const paymentEvents = pgTable("payment_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  clientId: uuid("client_id")
+    .notNull()
+    .references(() => clients.id, { onDelete: "cascade" }),
+  asaasPaymentId: text("asaas_payment_id"),
+  event: text("event").notNull(),
+  status: text("status").notNull(),
+  value: numeric("value", { precision: 10, scale: 2 }),
+  // Valor líquido que a Asaas repassa (depois da taxa dela). Com os dois, a
+  // taxa real do gateway é value - netValue — não precisa mais estimar.
+  netValue: numeric("net_value", { precision: 10, scale: 2 }),
+  billingType: text("billing_type"),
+  dueDate: timestamp("due_date", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 /* ---------- notificações dispensadas (sino do topo) ---------- */
 
 export const dismissedNotifications = pgTable(
@@ -242,6 +390,13 @@ export const usageLog = pgTable("usage_log", {
   tokensOut: integer("tokens_out").default(0).notNull(),
   audioSeconds: integer("audio_seconds").default(0).notNull(),
   whatsappMessages: integer("whatsapp_messages").default(0).notNull(),
+  // Custo real (USD) computado NA HORA da chamada, já por modelo e por
+  // camada de cache — ver src/lib/pricing.ts. tokensIn/tokensOut acima ficam
+  // só como dado informativo/depuração.
+  aiCostUsd: numeric("ai_cost_usd", { precision: 12, scale: 6 }).default("0").notNull(),
+  audioCostUsd: numeric("audio_cost_usd", { precision: 12, scale: 6 })
+    .default("0")
+    .notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -303,5 +458,10 @@ export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type EmailVerification = typeof emailVerifications.$inferSelect;
 export type TeamInvite = typeof teamInvites.$inferSelect;
+export type AdminInvite = typeof adminInvites.$inferSelect;
+export type ClientInvite = typeof clientInvites.$inferSelect;
+export type ClientAccessLog = typeof clientAccessLog.$inferSelect;
+export type PaymentEvent = typeof paymentEvents.$inferSelect;
+export type QuickReply = typeof quickReplies.$inferSelect;
 export type UsageLog = typeof usageLog.$inferSelect;
 export type NewUsageLog = typeof usageLog.$inferInsert;

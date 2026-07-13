@@ -44,6 +44,32 @@ export function money(value: string | number | null | undefined): string {
   }).format(n || 0);
 }
 
+/** "12 de agosto de 2026". */
+export function dateLong(d: Date | string | null | undefined): string {
+  if (!d) return "-";
+  const date = typeof d === "string" ? new Date(d) : d;
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    timeZone: "America/Sao_Paulo",
+  }).format(date);
+}
+
+/** "13/07/2026 14:32". */
+export function dateTimeShort(d: Date | string | null | undefined): string {
+  if (!d) return "-";
+  const date = typeof d === "string" ? new Date(d) : d;
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  }).format(date);
+}
+
 export function tempoResposta(seg: number | null): string {
   if (seg == null) return "-";
   if (seg < 60) return `${seg}s`;

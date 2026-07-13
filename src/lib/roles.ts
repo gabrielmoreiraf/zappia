@@ -1,11 +1,8 @@
 /**
  * Papéis do Zappia.
  *
- * O admin master (dono do Zappia) é APENAS este e-mail. Todo o resto que se
- * cadastra é cliente (dono de um negócio que contratou o Zappia).
+ * Quem é admin da agência agora vem de `users.isAdmin` (banco), não mais de um
+ * e-mail fixo no código — veja src/app/(app)/admins/ pra convidar outro admin.
+ * Esse e-mail só sobrevive como destinatário padrão de notificações internas.
  */
 export const ADMIN_EMAIL = "gabrielfmoreira4@gmail.com";
-
-export function isAdminEmail(email?: string | null): boolean {
-  return !!email && email.toLowerCase() === ADMIN_EMAIL;
-}

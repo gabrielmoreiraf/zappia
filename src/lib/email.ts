@@ -161,6 +161,76 @@ export async function sendTeamInvite(
   );
 }
 
+/* ---------- convite de administrador da agência ---------- */
+
+export async function sendAdminInvite(
+  to: string,
+  name: string,
+  link: string,
+): Promise<void> {
+  const content = `
+    <tr><td style="padding:16px 32px 4px;">
+      <h1 style="margin:0 0 6px;font-size:20px;color:#0f172a;">Olá, ${escapeHtml(name)}!</h1>
+      <p style="margin:0;color:#475569;font-size:14px;line-height:1.6;">Você foi convidado como administrador da agência no Zappia, com acesso a todos os clientes e ao faturamento. Clique no botão abaixo para criar sua senha e começar. O convite expira em 7 dias.</p>
+    </td></tr>
+    <tr><td align="center" style="padding:24px 32px;">
+      <a href="${link}" style="display:inline-block;background:#10b981;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:13px 30px;border-radius:12px;">Criar minha senha</a>
+    </td></tr>
+    <tr><td style="padding:0 32px 28px;">
+      <p style="margin:0;color:#94a3b8;font-size:12px;line-height:1.6;">Se você não esperava este convite, é só ignorar este e-mail.</p>
+    </td></tr>`;
+  await send(to, "Convite de administrador no Zappia", shell(content));
+}
+
+/* ---------- convite de cliente (dono de um novo negócio) ---------- */
+
+export async function sendClientInvite(
+  to: string,
+  name: string,
+  businessName: string,
+  link: string,
+  freeFirstMonth: boolean,
+): Promise<void> {
+  const bonus = freeFirstMonth
+    ? `<p style="margin:12px 0 0;color:#065f46;font-size:13px;background:#ecfdf5;border-radius:10px;padding:10px 14px;">🎁 Seu primeiro mês é por nossa conta.</p>`
+    : "";
+  const content = `
+    <tr><td style="padding:16px 32px 4px;">
+      <h1 style="margin:0 0 6px;font-size:20px;color:#0f172a;">Olá, ${escapeHtml(name)}!</h1>
+      <p style="margin:0;color:#475569;font-size:14px;line-height:1.6;">Sua conta em <strong>${escapeHtml(businessName)}</strong> está pronta no Zappia. Clique no botão abaixo para criar sua senha e começar a atender com IA. O convite expira em 7 dias.</p>
+      ${bonus}
+    </td></tr>
+    <tr><td align="center" style="padding:24px 32px;">
+      <a href="${link}" style="display:inline-block;background:#10b981;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:13px 30px;border-radius:12px;">Criar minha senha</a>
+    </td></tr>
+    <tr><td style="padding:0 32px 28px;">
+      <p style="margin:0;color:#94a3b8;font-size:12px;line-height:1.6;">Se você não esperava este convite, é só ignorar este e-mail.</p>
+    </td></tr>`;
+  await send(to, `Sua conta ${businessName} está pronta no Zappia`, shell(content));
+}
+
+/* ---------- lembrete de pagamento (5 dias antes) ---------- */
+
+export async function sendPaymentReminder(
+  to: string,
+  data: { businessName: string; dueDateLabel: string; invoiceUrl: string | null },
+): Promise<void> {
+  const content = `
+    <tr><td style="padding:16px 32px 4px;">
+      <span style="display:inline-block;background:#fffbeb;color:#92400e;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;">PAGAMENTO CHEGANDO</span>
+      <h1 style="margin:10px 0 4px;font-size:19px;color:#0f172a;">Sua próxima cobrança é em ${escapeHtml(data.dueDateLabel)}</h1>
+      <p style="margin:0;color:#475569;font-size:14px;line-height:1.6;">Pra <strong>${escapeHtml(data.businessName)}</strong> continuar atendendo sem interrupção, deixe o pagamento em dia.</p>
+    </td></tr>
+    ${
+      data.invoiceUrl
+        ? `<tr><td align="center" style="padding:20px 32px 28px;">
+      <a href="${data.invoiceUrl}" style="display:inline-block;background:#10b981;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:13px 30px;border-radius:12px;">Ver fatura</a>
+    </td></tr>`
+        : `<tr><td style="padding:0 32px 28px;"><p style="margin:0;color:#94a3b8;font-size:12px;">Acesse o painel do Zappia em Configurações para ver os detalhes.</p></td></tr>`
+    }`;
+  await send(to, `Pagamento Zappia chegando: ${data.dueDateLabel}`, shell(content));
+}
+
 /* ---------- notificações (Fase 7) ---------- */
 
 function infoRow(label: string, value: string): string {

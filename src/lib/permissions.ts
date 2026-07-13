@@ -1,5 +1,4 @@
 import type { User } from "@/db/schema";
-import { isAdminEmail } from "./roles";
 
 /**
  * Permissões granulares que o dono liga/desliga por funcionário.
@@ -30,9 +29,9 @@ export interface Caps {
 }
 
 export function capsFor(
-  user: Pick<User, "email" | "role" | "permissions">,
+  user: Pick<User, "role" | "permissions" | "isAdmin">,
 ): Caps {
-  if (isAdminEmail(user.email) || user.role === "owner") {
+  if (user.isAdmin || user.role === "owner") {
     return {
       conversas: true,
       leads: true,

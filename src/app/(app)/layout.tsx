@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
+import { ShieldAlert } from "lucide-react";
 import { getCurrentUser } from "@/lib/current-user";
 import { getCurrentClient } from "@/lib/current-client";
 import { getNotifications } from "@/db/panel";
-import { isAdminEmail } from "@/lib/roles";
 import { capsFor } from "@/lib/permissions";
 import { MobileNav, Sidebar } from "./nav";
 import { Topbar } from "./topbar";
@@ -18,7 +18,7 @@ export default async function AppLayout({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const isAdmin = isAdminEmail(user.email);
+  const isAdmin = user.isAdmin;
   const caps = capsFor(user);
   const client = await getCurrentClient();
   // Cliente sem negócio ainda → onboarding.
@@ -54,6 +54,14 @@ export default async function AppLayout({
           userEmail={user.email}
           userImage={user.image}
         />
+
+        {isAdmin && client && (
+          <div className="shrink-0 bg-amber-50 border-b border-amber-100 px-4 sm:px-6 py-2 flex items-center gap-2 text-xs text-amber-800">
+            <ShieldAlert size={14} className="shrink-0" />
+            Você está vendo os dados de <strong>{client.name}</strong> como
+            suporte administrativo. Esse acesso fica registrado.
+          </div>
+        )}
 
         {/* Rola dentro do main; a shell (sidebar/topbar) fica fixa. */}
         <main className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pb-24 md:pb-6">

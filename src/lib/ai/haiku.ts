@@ -1,7 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Client } from "@/db/schema";
 import { env } from "../env";
-import { buildSystemPrompt } from "./prompt";
+import { costOfAnthropicCallUSD } from "../pricing";
+import { buildSystemPrompt, buildContactBlock } from "./prompt";
 import { normalizeHaikuOutput, type HaikuOutput } from "./types";
 
 // §5 do prompt mestre: Haiku 4.5 é o modelo BASE (barato, rápido) e resolve a
@@ -58,6 +59,9 @@ export interface HaikuResult {
   /** true quando precisou escalar pro modelo mais forte. */
   escalated: boolean;
   raw: string;
+  /** Custo real (USD) de TODAS as chamadas feitas nessa mensagem (Haiku +
+   * Sonnet quando escalou), já com o preço certo de cada modelo/camada. */
+  costUsd: number;
 }
 
 let _client: Anthropic | null = null;
@@ -146,13 +150,21 @@ function shouldEscalate(parsed: unknown, output: HaikuOutput): boolean {
 export async function runHaiku(
   client: Client,
   history: HistoryTurn[],
+  contactName?: string | null,
 ): Promise<HaikuResult> {
   const system: Anthropic.TextBlockParam[] = [
     {
       type: "text",
       text: buildSystemPrompt(client),
-      // Caching: a base é grande e estável por cliente (§5).
+      // Caching: a base é grande e estável por cliente, igual pra qualquer
+      // contato (§5). O nome do contato NÃO entra aqui — varia por conversa e
+      // quebraria o cache (forçaria escrita nova, mais cara, a cada contato
+      // diferente). Vai num bloco à parte, pequeno e sem cache.
       cache_control: { type: "ephemeral" },
+    },
+    {
+      type: "text",
+      text: buildContactBlock(contactName),
     },
   ];
 
@@ -190,6 +202,7 @@ export async function runHaiku(
   }
   const fastOutput = parsed ? normalizeHaikuOutput(parsed) : fallbackOutput();
   let usage = usageOf(fastResp);
+  let costUsd = costOfAnthropicCallUSD(MODEL_FAST, usage);
 
   // --- 2ª passada (só se preciso): Sonnet 5. Sem temperatura e sem prefill;
   // o formato JSON vem de output_config, e desligamos o thinking p/ economizar.
@@ -211,7 +224,9 @@ export async function runHaiku(
       } catch {
         smartParsed = null;
       }
-      usage = addUsage(usage, usageOf(smartResp));
+      const smartUsage = usageOf(smartResp);
+      usage = addUsage(usage, smartUsage);
+      costUsd += costOfAnthropicCallUSD(MODEL_SMART, smartUsage);
 
       if (smartParsed) {
         return {
@@ -220,6 +235,7 @@ export async function runHaiku(
           model: MODEL_SMART,
           escalated: true,
           raw: smartRaw,
+          costUsd,
         };
       }
     } catch (err) {
@@ -234,5 +250,37 @@ export async function runHaiku(
     model: MODEL_FAST,
     escalated: false,
     raw: fastRaw,
+    costUsd,
   };
+}
+
+const IMPROVE_SYSTEM_PROMPT =
+  'Você melhora rascunhos de mensagens de atendimento ao cliente em português do Brasil, escritas por um atendente humano no WhatsApp. Corrija ortografia e gramática, deixe o tom natural e educado, sem exagerar na formalidade nem adicionar emoji se não tinha. Mantenha o tamanho parecido com o original e a mesma intenção. Responda APENAS com o texto final, sem aspas, sem comentário, sem explicação.';
+
+export interface ImproveDraftResult {
+  text: string;
+  costUsd: number;
+  usage: Usage;
+}
+
+/**
+ * "Sugerir melhoria no texto": chamada avulsa e pequena (sem base de
+ * conhecimento, sem JSON, sem cache) pra corrigir/polir o rascunho do humano
+ * antes de enviar. Custo desprezível: poucas dezenas de tokens por uso —
+ * ainda assim entra no usage_log (ver actions.ts) pra não virar custo invisível.
+ */
+export async function improveDraftText(
+  draft: string,
+): Promise<ImproveDraftResult> {
+  const resp = await anthropic().messages.create({
+    model: MODEL_FAST,
+    max_tokens: 300,
+    temperature: 0.3,
+    system: IMPROVE_SYSTEM_PROMPT,
+    messages: [{ role: "user", content: draft }],
+  });
+  const text = textOf(resp).trim();
+  const usage = usageOf(resp);
+  const costUsd = costOfAnthropicCallUSD(MODEL_FAST, usage);
+  return { text: text || draft, costUsd, usage };
 }

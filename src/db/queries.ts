@@ -86,6 +86,7 @@ export async function touchConversation(
     lastMessageAt?: Date;
     incUnread?: number;
     closedAt?: Date | null;
+    outOfHoursNotified?: boolean;
   },
 ): Promise<void> {
   const set: Record<string, unknown> = {
@@ -96,6 +97,7 @@ export async function touchConversation(
   if (opts.incUnread && opts.incUnread > 0) {
     set.unreadCount = sql`${conversations.unreadCount} + ${opts.incUnread}`;
   }
+  if ("outOfHoursNotified" in opts) set.outOfHoursNotified = opts.outOfHoursNotified;
   await db
     .update(conversations)
     .set(set)
@@ -204,13 +206,19 @@ export async function upsertLead(input: {
   return { created: true };
 }
 
-/** Registra consumo pra tela de Faturamento (§6). */
+/** Registra consumo pra tela de Faturamento (§6). Custos já vêm em USD, calculados na hora da chamada (ver src/lib/pricing.ts). */
 export async function logUsage(input: {
   clientId: string;
   tokensIn: number;
   tokensOut: number;
   audioSeconds: number;
   whatsappMessages: number;
+  aiCostUsd: number;
+  audioCostUsd: number;
 }): Promise<void> {
-  await db.insert(usageLog).values(input);
+  await db.insert(usageLog).values({
+    ...input,
+    aiCostUsd: String(input.aiCostUsd),
+    audioCostUsd: String(input.audioCostUsd),
+  });
 }

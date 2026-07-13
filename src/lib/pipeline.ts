@@ -1,6 +1,8 @@
 import { runHaiku, type HistoryTurn } from "./ai/haiku";
 import type { HaikuOutput } from "./ai/types";
+import { isWithinBusinessHours } from "./business-hours";
 import { transcribeAudio } from "./groq";
+import { costOfTranscriptionUSD } from "./pricing";
 import { sendHandoffNotification, sendLeadNotification } from "./email";
 import { downloadMedia, getMediaUrl, sendText } from "./whatsapp";
 import type { Client } from "@/db/schema";
@@ -93,6 +95,34 @@ export async function processInbound(
     return { status: "handled_by_human" };
   }
 
+  // Horário de atendimento: fora da janela configurada a IA não responde.
+  // Manda o aviso uma única vez por janela fora do horário (não repete a cada
+  // mensagem nova) e deixa a conversa "novo" pra aparecer pro dono quando o
+  // expediente voltar.
+  if (!isWithinBusinessHours(client)) {
+    await touchConversation(convo.id, { status: "novo", incUnread: 1 });
+    if (!convo.outOfHoursNotified) {
+      const outOfHoursMessage = client.outOfHoursMessage?.trim();
+      if (outOfHoursMessage) {
+        await insertMessage({
+          conversationId: convo.id,
+          from: "bot",
+          text: outOfHoursMessage,
+        });
+        try {
+          await sendText(msg.phoneNumberId, msg.from, outOfHoursMessage);
+        } catch (err) {
+          console.error("[pipeline] envio do aviso de fora do expediente falhou:", err);
+        }
+      }
+      await touchConversation(convo.id, { outOfHoursNotified: true });
+    }
+    return { status: "handled_by_human" };
+  }
+  if (convo.outOfHoursNotified) {
+    await touchConversation(convo.id, { outOfHoursNotified: false });
+  }
+
   // Aguardando atendimento humano: a IA NÃO improvisa. Manda a mensagem de
   // "alta demanda" (tranquiliza), mas só se faz um tempo desde a última resposta
   // nossa, assim não repete a cada "oi?/eai?".
@@ -115,12 +145,13 @@ export async function processInbound(
   }
 
   // 4-5. monta prompt + histórico e chama o Haiku
+  const contactName = convo.contactName ?? msg.contactName ?? null;
   const history = await getRecentMessages(convo.id, 12);
   const turns: HistoryTurn[] = history.map((m) => ({
     from: m.from,
     text: m.text,
   }));
-  const { output, usage } = await runHaiku(client, turns);
+  const { output, usage, costUsd } = await runHaiku(client, turns, contactName);
 
   // 6. grava a resposta do bot
   await insertMessage({
@@ -134,7 +165,6 @@ export async function processInbound(
   // Aqui a conversa está sempre em "ia" (as "novo"/"voce" já retornaram acima),
   // então qualquer handoff da IA é uma transição nova → notifica o dono.
   const newHandoff = output.handoff;
-  const contactName = convo.contactName ?? msg.contactName ?? null;
 
   // 8. atualiza a conversa (handoff muda status p/ "novo")
   await touchConversation(convo.id, {
@@ -163,7 +193,8 @@ export async function processInbound(
     handoffReason: output.handoff_reason,
   });
 
-  // §6. consumo
+  // §6. consumo. tokensIn/tokensOut ficam só informativos — o custo real
+  // (aiCostUsd) já vem calculado por modelo/camada de cache do runHaiku.
   await logUsage({
     clientId: client.id,
     tokensIn:
@@ -171,6 +202,8 @@ export async function processInbound(
     tokensOut: usage.outputTokens,
     audioSeconds,
     whatsappMessages: 1,
+    aiCostUsd: costUsd,
+    audioCostUsd: costOfTranscriptionUSD(audioSeconds),
   });
 
   // 9. envia a resposta ao cliente final (não quebra o fluxo se a Meta não estiver

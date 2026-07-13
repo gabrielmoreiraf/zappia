@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { Bot } from "lucide-react";
 import { getCurrentUser } from "@/lib/current-user";
-import { isAdminEmail } from "@/lib/roles";
 import { WelcomeForm } from "./welcome-form";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function BemVindoPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (isAdminEmail(user.email)) redirect("/clientes");
+  if (user.isAdmin) redirect("/clientes");
   if (user.clientId) redirect("/dashboard");
 
   const firstName = (user.name ?? "").split(" ")[0];

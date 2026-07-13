@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bot, Mic, Send, Sparkles, Users } from "lucide-react";
+import { ArrowLeft, Bot, Mic, Send, Sparkles, Users, Wand2, Zap } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { assumirConversa, devolverParaIA, sendReply } from "../actions";
+import {
+  assumirConversa,
+  devolverParaIA,
+  sendReply,
+  suggestReplyImprovement,
+} from "../actions";
 import { initials, timeShort } from "@/lib/format";
 
 export interface ChatMessage {
@@ -22,19 +28,29 @@ export interface ChatConversation {
   status: "ia" | "novo" | "voce";
 }
 
+export interface QuickReplyItem {
+  id: string;
+  shortcut: string;
+  message: string;
+}
+
 export function ChatPanel({
   conversation,
   messages,
+  quickReplies = [],
   onChanged,
 }: {
   conversation: ChatConversation;
   messages: ChatMessage[];
+  quickReplies?: QuickReplyItem[];
   onChanged?: () => void | Promise<void>;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [improving, startImproving] = useTransition();
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Auto-scroll pro final quando chega mensagem nova (ou troca de conversa).
   const lastMessageId = messages[messages.length - 1]?.id;
@@ -42,6 +58,21 @@ export function ChatPanel({
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [lastMessageId]);
+
+  // "/" no começo do texto abre o menu de respostas rápidas, como no WhatsApp
+  // Business. Filtra pelo que vem depois da barra.
+  const shortcutQuery =
+    draft.startsWith("/") && !draft.includes(" ") ? draft.slice(1).toLowerCase() : null;
+  const shortcutMatches = useMemo(() => {
+    if (shortcutQuery === null) return [];
+    return quickReplies.filter((q) => q.shortcut.toLowerCase().startsWith(shortcutQuery));
+  }, [shortcutQuery, quickReplies]);
+  const showShortcuts = shortcutQuery !== null && shortcutMatches.length > 0;
+
+  function pickShortcut(msg: string) {
+    setDraft(msg);
+    inputRef.current?.focus();
+  }
 
   const statusLine =
     conversation.status === "voce"
@@ -70,6 +101,18 @@ export function ChatPanel({
     start(async () => {
       await sendReply(conversation.id, text);
       await onChanged?.();
+    });
+  }
+  function sugerirMelhoria() {
+    const text = draft.trim();
+    if (!text) return;
+    startImproving(async () => {
+      const res = await suggestReplyImprovement(text);
+      if (res.ok && res.text) {
+        setDraft(res.text);
+      } else {
+        toast.error(res.error ?? "Não foi possível sugerir agora.");
+      }
     });
   }
 
@@ -164,21 +207,53 @@ export function ChatPanel({
 
       <form
         onSubmit={enviar}
-        className="p-3 border-t border-slate-100 flex items-center gap-2"
+        className="p-3 border-t border-slate-100 relative"
       >
-        <Input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Escreva pra assumir a conversa…"
-          className="flex-1"
-        />
-        <Button
-          type="submit"
-          size="icon"
-          disabled={pending || !draft.trim()}
-        >
-          <Send size={17} />
-        </Button>
+        {showShortcuts && (
+          <div className="absolute bottom-full left-3 right-3 mb-1.5 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto z-10">
+            {shortcutMatches.map((q) => (
+              <button
+                key={q.id}
+                type="button"
+                onClick={() => pickShortcut(q.message)}
+                className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-start gap-2 border-b border-slate-50 last:border-b-0"
+              >
+                <Zap size={13} className="text-emerald-500 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-slate-700">
+                    /{q.shortcut}
+                  </div>
+                  <div className="text-xs text-slate-500 truncate">
+                    {q.message}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center gap-2">
+          <Input
+            ref={inputRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder='Escreva pra assumir a conversa… ("/" pra respostas rápidas)'
+            className="flex-1"
+          />
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            onClick={sugerirMelhoria}
+            disabled={improving || !draft.trim()}
+            aria-label="Sugerir melhoria no texto"
+            title="Sugerir melhoria no texto"
+          >
+            <Wand2 size={16} className={improving ? "animate-pulse" : ""} />
+          </Button>
+          <Button type="submit" size="icon" disabled={pending || !draft.trim()}>
+            <Send size={17} />
+          </Button>
+        </div>
       </form>
     </div>
   );

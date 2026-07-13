@@ -15,7 +15,6 @@ import {
   Settings,
   SlidersHorizontal,
   Store,
-  Trash2,
   UserCog,
   Users,
   type LucideIcon,
@@ -25,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PhotoActionsMenu } from "@/components/photo-actions-menu";
 import { resetPersonalization, savePersonalization } from "./actions";
 
 const DEFAULT_BRAND = "#10b981";
@@ -155,7 +155,15 @@ export function PersonalizacaoForm({
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl border border-slate-200 bg-white overflow-hidden flex items-center justify-center shrink-0">
+              <PhotoActionsMenu
+                src={logo}
+                alt="Logo do negócio"
+                filename="logo.jpg"
+                onPick={() => fileRef.current?.click()}
+                onRemove={() => setLogo(null)}
+                hideChangeInMenu
+                className="w-16 h-16 rounded-2xl border border-slate-200 bg-white overflow-hidden flex items-center justify-center shrink-0 cursor-pointer"
+              >
                 {logo ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -166,31 +174,17 @@ export function PersonalizacaoForm({
                 ) : (
                   <Store size={22} className="text-slate-300" />
                 )}
-              </div>
+              </PhotoActionsMenu>
               <div>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={pending}
-                    onClick={() => fileRef.current?.click()}
-                  >
-                    <ImagePlus size={14} /> Enviar logo
-                  </Button>
-                  {logo && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      disabled={pending}
-                      className="text-red-600"
-                      onClick={() => setLogo(null)}
-                    >
-                      <Trash2 size={14} /> Tirar
-                    </Button>
-                  )}
-                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={pending}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <ImagePlus size={14} /> Enviar logo
+                </Button>
                 <p className="text-xs text-muted-foreground mt-1">
                   PNG ou JPG. A gente ajusta o tamanho.
                 </p>

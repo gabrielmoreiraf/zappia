@@ -14,8 +14,10 @@ import {
   Bot,
   Building2,
   Wallet,
+  ShieldCheck,
   ChevronLeft,
   Store,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { exitClient } from "./agency-actions";
@@ -29,8 +31,10 @@ function clientSections(caps: Caps): Section[] {
   const operacao: Item[] = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   ];
-  if (caps.conversas)
+  if (caps.conversas) {
     operacao.push({ href: "/conversas", label: "Conversas", icon: MessageSquare });
+    operacao.push({ href: "/atalhos", label: "Respostas rápidas", icon: Zap });
+  }
   if (caps.leads) operacao.push({ href: "/leads", label: "Leads", icon: Users });
 
   const sections: Section[] = [{ label: "Operação", items: operacao }];
@@ -59,6 +63,7 @@ function clientSections(caps: Caps): Section[] {
 const AGENCY_ITEMS: Item[] = [
   { href: "/clientes", label: "Clientes", icon: Building2 },
   { href: "/faturamento", label: "Faturamento", icon: Wallet },
+  { href: "/admins", label: "Administradores", icon: ShieldCheck },
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -196,6 +201,7 @@ export function MobileNav({
     items = [
       { href: "/clientes", label: "Clientes", icon: Building2 },
       { href: "/faturamento", label: "Faturamento", icon: Wallet },
+      { href: "/admins", label: "Admins", icon: ShieldCheck },
       { href: "/perfil", label: "Perfil", icon: Users },
     ];
   }

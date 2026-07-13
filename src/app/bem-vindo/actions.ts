@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { clients, users } from "@/db/schema";
-import { isAdminEmail } from "@/lib/roles";
 import { PLAN_PRICE } from "@/lib/plan";
 
 export interface ActionResult {
@@ -21,14 +20,15 @@ export async function createOwnBusiness(
   const userId = session?.user?.id;
   const email = session?.user?.email;
   if (!userId) return { ok: false, error: "Sessão expirada." };
-  if (isAdminEmail(email)) return { ok: false, error: "Admin não faz onboarding." };
 
-  // Já tem negócio? não recria.
+  // Já tem negócio? não recria. Consulta o banco (não o JWT) pra pegar o
+  // isAdmin sempre em dia.
   const [existing] = await db
-    .select({ clientId: users.clientId })
+    .select({ clientId: users.clientId, isAdmin: users.isAdmin })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
+  if (existing?.isAdmin) return { ok: false, error: "Admin não faz onboarding." };
   if (existing?.clientId) redirect("/dashboard");
 
   const businessName = String(formData.get("businessName") ?? "").trim();

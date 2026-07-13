@@ -83,6 +83,107 @@ export async function getDisplayPhoneNumber(phoneNumberId: string): Promise<stri
   return j.display_phone_number;
 }
 
+export interface BusinessProfile {
+  about?: string;
+  address?: string;
+  description?: string;
+  email?: string;
+  profilePictureUrl?: string;
+  websites?: string[];
+  vertical?: string;
+}
+
+const PROFILE_FIELDS =
+  "about,address,description,email,profile_picture_url,websites,vertical";
+
+/** Perfil de negócio do WhatsApp (o que o cliente final vê ao abrir o chat). */
+export async function getBusinessProfile(
+  phoneNumberId: string,
+): Promise<BusinessProfile> {
+  const r = await fetch(
+    `${GRAPH}/${VERSION}/${phoneNumberId}/whatsapp_business_profile?fields=${PROFILE_FIELDS}`,
+    { headers: { Authorization: `Bearer ${env.whatsappToken}` } },
+  );
+  if (!r.ok) throw new Error(`getBusinessProfile ${r.status}: ${await r.text()}`);
+  const j = (await r.json()) as { data?: Record<string, unknown>[] };
+  const p = j.data?.[0] ?? {};
+  return {
+    about: p.about as string | undefined,
+    address: p.address as string | undefined,
+    description: p.description as string | undefined,
+    email: p.email as string | undefined,
+    profilePictureUrl: p.profile_picture_url as string | undefined,
+    websites: p.websites as string[] | undefined,
+    vertical: p.vertical as string | undefined,
+  };
+}
+
+/** Atualiza o perfil de negócio. Não manda profile_picture_handle aqui — ver uploadProfilePicture. */
+export async function updateBusinessProfile(
+  phoneNumberId: string,
+  fields: Partial<Omit<BusinessProfile, "profilePictureUrl" | "vertical">> & {
+    profilePictureHandle?: string;
+  },
+): Promise<void> {
+  const body: Record<string, unknown> = { messaging_product: "whatsapp" };
+  if (fields.about !== undefined) body.about = fields.about;
+  if (fields.address !== undefined) body.address = fields.address;
+  if (fields.description !== undefined) body.description = fields.description;
+  if (fields.email !== undefined) body.email = fields.email;
+  if (fields.websites !== undefined) body.websites = fields.websites;
+  if (fields.profilePictureHandle) {
+    body.profile_picture_handle = fields.profilePictureHandle;
+  }
+  const r = await fetch(`${GRAPH}/${VERSION}/${phoneNumberId}/whatsapp_business_profile`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.whatsappToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error(`updateBusinessProfile ${r.status}: ${await r.text()}`);
+}
+
+/**
+ * Envia a foto de perfil: 1) abre uma sessão de upload, 2) sobe os bytes,
+ * 3) devolve o "handle" pra usar em updateBusinessProfile. Fluxo oficial da
+ * Meta (Resumable Upload API), em duas chamadas porque a sessão e o upload
+ * são endpoints diferentes.
+ */
+export async function uploadProfilePicture(
+  bytes: Buffer,
+  mimeType: string,
+): Promise<string> {
+  const appId = process.env.NEXT_PUBLIC_META_APP_ID;
+  if (!appId) throw new Error("NEXT_PUBLIC_META_APP_ID não definido.");
+
+  const sessionRes = await fetch(
+    `${GRAPH}/${VERSION}/${appId}/uploads?file_length=${bytes.length}&file_type=${encodeURIComponent(mimeType)}&access_token=${encodeURIComponent(env.whatsappToken)}`,
+    { method: "POST" },
+  );
+  if (!sessionRes.ok) {
+    throw new Error(`uploadProfilePicture (sessão) ${sessionRes.status}: ${await sessionRes.text()}`);
+  }
+  const { id: uploadSessionId } = (await sessionRes.json()) as { id: string };
+
+  const uploadRes = await fetch(`${GRAPH}/${VERSION}/${uploadSessionId}`, {
+    method: "POST",
+    headers: {
+      Authorization: `OAuth ${env.whatsappToken}`,
+      file_offset: "0",
+    },
+    // Node aceita Buffer como corpo de fetch em runtime; o typing do DOM lib
+    // só conhece BodyInit do browser, então precisa desse cast.
+    body: bytes as unknown as BodyInit,
+  });
+  if (!uploadRes.ok) {
+    throw new Error(`uploadProfilePicture (bytes) ${uploadRes.status}: ${await uploadRes.text()}`);
+  }
+  const { h } = (await uploadRes.json()) as { h: string };
+  return h;
+}
+
 /** Passo 9 do pipeline: envia a resposta de texto ao cliente final. */
 export async function sendText(
   phoneNumberId: string,

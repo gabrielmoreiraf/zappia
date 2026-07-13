@@ -1,14 +1,15 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { getBilling } from "@/db/agency";
 import { getCurrentUser } from "@/lib/current-user";
-import { isAdminEmail } from "@/lib/roles";
 import { money } from "@/lib/format";
 import { Card } from "@/components/ui/card";
 import { Header } from "../ui";
 
 export default async function FaturamentoPage() {
   const user = await getCurrentUser();
-  if (!isAdminEmail(user?.email)) redirect("/dashboard");
+  if (!user?.isAdmin) redirect("/dashboard");
   const b = await getBilling();
 
   const cards = [
@@ -37,9 +38,10 @@ export default async function FaturamentoPage() {
           <span className="w-28 text-right">Custo estimado</span>
         </div>
         {b.rows.map((r, i) => (
-          <div
+          <Link
             key={r.id}
-            className={`px-4 py-3 flex items-center text-sm ${
+            href={`/clientes/${r.id}`}
+            className={`px-4 py-3 flex items-center text-sm hover:bg-slate-50 ${
               i < b.rows.length - 1 ? "border-b border-slate-50" : ""
             }`}
           >
@@ -49,16 +51,19 @@ export default async function FaturamentoPage() {
             <span className="w-24 text-right text-emerald-600 font-semibold">
               {money(r.receita)}
             </span>
-            <span className="w-28 text-right text-slate-500">
+            <span className="w-28 text-right text-red-600 font-medium">
               {money(r.custo)}
             </span>
-          </div>
+            <ChevronRight size={15} className="text-slate-300 ml-2 shrink-0" />
+          </Link>
         ))}
       </Card>
 
       <p className="text-xs text-slate-400 mt-3">
-        Custo estimado = tokens do Haiku + minutos de áudio (Groq) + mensagens
-        WhatsApp do mês. Valores aproximados, ajustáveis conforme as faturas reais.
+        Custo = IA (Claude) + áudio (Groq), calculados por chamada, mais a taxa
+        da Asaas (real quando já existe pagamento confirmado, senão estimada).
+        Mensagens de WhatsApp não entram: são grátis dentro da janela de
+        atendimento. Veja o detalhe clicando num cliente.
       </p>
     </div>
   );

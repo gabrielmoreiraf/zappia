@@ -16,8 +16,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/password-input";
+import { PhotoActionsMenu } from "@/components/photo-actions-menu";
 import { PASSWORD_RULES, isPasswordValid } from "@/lib/password";
-import { changePassword, saveAvatar, updateProfile } from "../profile-actions";
+import {
+  changePassword,
+  removeAvatar,
+  saveAvatar,
+  updateProfile,
+} from "../profile-actions";
 
 /**
  * Recorta a imagem num quadrado centralizado e redimensiona no navegador.
@@ -112,6 +118,19 @@ export function ProfileForm({
     });
   }
 
+  function removePhoto() {
+    start(async () => {
+      const res = await removeAvatar();
+      if (res.ok) {
+        setImage(null);
+        toast.success("Foto removida.");
+        router.refresh();
+      } else {
+        toast.error(res.error ?? "Não foi possível remover a foto.");
+      }
+    });
+  }
+
   function saveInfo(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -166,12 +185,21 @@ export function ProfileForm({
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4 mb-5">
-            <Avatar className="size-16">
-              {image && <AvatarImage src={image} alt={user.name} />}
-              <AvatarFallback className="bg-emerald-500 text-white text-lg font-bold">
-                {initials(user.name, user.email)}
-              </AvatarFallback>
-            </Avatar>
+            <PhotoActionsMenu
+              src={image}
+              alt="Foto de perfil"
+              filename="foto-perfil.jpg"
+              onPick={() => fileRef.current?.click()}
+              onRemove={removePhoto}
+              hideChangeInMenu
+            >
+              <Avatar className="size-16 cursor-pointer">
+                {image && <AvatarImage src={image} alt={user.name} />}
+                <AvatarFallback className="bg-emerald-500 text-white text-lg font-bold">
+                  {initials(user.name, user.email)}
+                </AvatarFallback>
+              </Avatar>
+            </PhotoActionsMenu>
             <div>
               <Button
                 type="button"

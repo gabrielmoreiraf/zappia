@@ -44,4 +44,13 @@ export const env = {
   get cronSecret() {
     return required("CRON_SECRET");
   },
+  get asaasApiKey() {
+    return required("ASAAS_API_KEY");
+  },
+  get asaasEnv() {
+    return process.env.ASAAS_ENV === "production" ? "production" : "sandbox";
+  },
+  get asaasWebhookToken() {
+    return required("ASAAS_WEBHOOK_TOKEN");
+  },
 };

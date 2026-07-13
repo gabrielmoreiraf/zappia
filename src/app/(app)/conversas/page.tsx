@@ -1,4 +1,7 @@
 import { redirect } from "next/navigation";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { quickReplies } from "@/db/schema";
 import { getCurrentClient } from "@/lib/current-client";
 import { getConversationsList, getConversationThread } from "@/db/panel";
 import { Header } from "../ui";
@@ -13,6 +16,14 @@ export default async function ConversasPage({
   const client = await getCurrentClient();
   if (!client) redirect("/clientes");
   const all = await getConversationsList(client.id);
+  const shortcuts = await db
+    .select({
+      id: quickReplies.id,
+      shortcut: quickReplies.shortcut,
+      message: quickReplies.message,
+    })
+    .from(quickReplies)
+    .where(eq(quickReplies.clientId, client.id));
   const term = (q ?? "").trim().toLowerCase();
   const convos = term
     ? all.filter((c) => (c.contactName ?? "").toLowerCase().includes(term))
@@ -28,6 +39,7 @@ export default async function ConversasPage({
         key={`${selectedId ?? ""}|${q ?? ""}`}
         selectedId={selectedId ?? null}
         q={q ?? ""}
+        quickReplies={shortcuts}
         initialConvos={convos.map((c) => ({
           id: c.id,
           contactName: c.contactName,

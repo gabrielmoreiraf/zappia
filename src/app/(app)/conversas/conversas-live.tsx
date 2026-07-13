@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { initials, timeShort } from "@/lib/format";
 import { CONV_STATUS } from "../ui";
-import { ChatPanel, type ChatMessage } from "./chat-panel";
+import { ChatPanel, type ChatMessage, type QuickReplyItem } from "./chat-panel";
 
 type ConvStatus = "ia" | "novo" | "voce";
 
@@ -31,11 +31,13 @@ export function ConversasLive({
   initialThread,
   selectedId,
   q,
+  quickReplies,
 }: {
   initialConvos: LiveConvItem[];
   initialThread: LiveThread | null;
   selectedId: string | null;
   q: string;
+  quickReplies: QuickReplyItem[];
 }) {
   const [convos, setConvos] = useState(initialConvos);
   const [thread, setThread] = useState(initialThread);
@@ -147,6 +149,7 @@ export function ConversasLive({
       <ChatPanel
         conversation={thread.conversation}
         messages={thread.messages}
+        quickReplies={quickReplies}
         onChanged={refetch}
       />
     </div>

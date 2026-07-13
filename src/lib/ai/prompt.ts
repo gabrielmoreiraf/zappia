@@ -24,6 +24,18 @@ export function filterKnowledgeBase(kb: string | null | undefined): string {
 }
 
 /**
+ * Bloco pequeno e SEM cache com o nome do contato desta conversa (varia por
+ * contato, por isso fica fora do bloco grande cacheado — ver haiku.ts).
+ */
+export function buildContactBlock(contactName?: string | null): string {
+  const name = contactName?.trim();
+  if (!name) {
+    return "# CONTATO\nVocê não sabe o nome de quem está falando com você agora. NÃO invente um nome nem pergunte o nome logo de cara sem necessidade; trate a pessoa naturalmente sem usar nome nenhum.";
+  }
+  return `# CONTATO\nQuem está falando com você agora se chama "${name}" (nome do WhatsApp dele). Use o nome com naturalidade em algum momento da conversa, como uma pessoa faria, mas não repita o nome em toda mensagem.`;
+}
+
+/**
  * Monta o system prompt (§1 do prompt mestre). Os {{ }} são preenchidos por
  * cliente. As REGRAS são fixas: não reescrever.
  */

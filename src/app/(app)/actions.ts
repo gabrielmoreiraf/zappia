@@ -11,8 +11,10 @@ import {
   type Course,
 } from "@/lib/knowledge-base";
 import { extractCourses } from "@/lib/ai/extract-knowledge";
-import { runHaiku, type HistoryTurn } from "@/lib/ai/haiku";
+import { runHaiku, improveDraftText, type HistoryTurn } from "@/lib/ai/haiku";
 import { sendText } from "@/lib/whatsapp";
+import { logUsage } from "@/db/queries";
+import { parseBusinessHours, serializeBusinessHours } from "@/lib/business-hours";
 
 /* ---------- Conversas (§4.4) ---------- */
 
@@ -90,6 +92,37 @@ export async function sendReply(conversationId: string, text: string) {
   revalidatePath("/conversas");
 }
 
+/**
+ * "Sugerir melhoria no texto": só roda quando o humano clica, nunca
+ * automático. Custo real (poucas dezenas de tokens) entra no usage_log pra
+ * aparecer certinho no Faturamento, não fica escondido.
+ */
+export async function suggestReplyImprovement(
+  text: string,
+): Promise<{ ok: boolean; text?: string; error?: string }> {
+  const client = await getCurrentClient();
+  if (!client) return { ok: false, error: "Sem permissão." };
+  const draft = text.trim();
+  if (!draft) return { ok: false, error: "Escreva algo primeiro." };
+
+  try {
+    const { text: improved, costUsd, usage } = await improveDraftText(draft);
+    await logUsage({
+      clientId: client.id,
+      tokensIn: usage.inputTokens + usage.cacheReadTokens + usage.cacheCreationTokens,
+      tokensOut: usage.outputTokens,
+      audioSeconds: 0,
+      whatsappMessages: 0,
+      aiCostUsd: costUsd,
+      audioCostUsd: 0,
+    });
+    return { ok: true, text: improved };
+  } catch (err) {
+    console.error("[suggestReplyImprovement] falhou:", err);
+    return { ok: false, error: "Não foi possível sugerir agora." };
+  }
+}
+
 /* ---------- Leads (§4.5) ---------- */
 
 export async function updateLeadStatus(
@@ -159,6 +192,30 @@ export async function saveNotifications(formData: FormData) {
       notifyHandoff: formData.get("notifyHandoff") != null,
       notifyDailySummary: formData.get("notifyDailySummary") != null,
     })
+    .where(eq(clients.id, client.id));
+
+  revalidatePath("/config");
+}
+
+/* ---------- Configurações · horário de atendimento ---------- */
+
+const DEFAULT_OUT_OF_HOURS_MESSAGE =
+  "No momento estamos fora do nosso horário de atendimento. Assim que o expediente começar, alguém da nossa equipe vai te responder por aqui. Obrigado pela paciência!";
+
+export async function saveBusinessHours(formData: FormData) {
+  const client = await getCurrentClient();
+  if (!client) return;
+
+  const businessHoursEnabled = formData.get("businessHoursEnabled") != null;
+  const rawHours = String(formData.get("businessHours") ?? "");
+  const hours = serializeBusinessHours(parseBusinessHours(rawHours));
+  const outOfHoursMessage =
+    String(formData.get("outOfHoursMessage") ?? "").trim() ||
+    DEFAULT_OUT_OF_HOURS_MESSAGE;
+
+  await db
+    .update(clients)
+    .set({ businessHoursEnabled, businessHours: hours, outOfHoursMessage })
     .where(eq(clients.id, client.id));
 
   revalidatePath("/config");
