@@ -9,12 +9,12 @@ const SCRIPT: Bubble[] = [
   { from: "them", text: "Oi! Vocês têm horário pra amanhã de manhã?" },
   {
     from: "bot",
-    text: "Oi! 😊 Temos sim, o horário das 10h está livre. Quer que eu reserve pra você?",
+    text: "Oi! Temos sim, o horário das 10h está livre. Quer que eu reserve pra você?",
   },
   { from: "them", text: "Quero sim! Quanto custa a consulta?" },
   {
     from: "bot",
-    text: "Deixa eu confirmar certinho com a equipe pra não te passar nada errado. Já te retorno! 🙌",
+    text: "Deixa eu confirmar certinho com a equipe pra não te passar nada errado. Já te retorno!",
   },
 ];
 
@@ -123,12 +123,16 @@ export function HeroChatDemo() {
         </div>
       </div>
 
-      {leadCaptured && (
-        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-white border border-emerald-200 shadow-lg rounded-full px-3.5 py-2 text-xs font-semibold text-emerald-700 animate-bubble-in">
-          <CheckCircle2 size={14} className="text-emerald-500" /> Lead capturado
-          automaticamente
-        </div>
-      )}
+      {/* Altura fixa: reserva o espaço do badge desde o início, então ele
+          aparece no fim do loop sem empurrar o layout nem cobrir a conversa. */}
+      <div className="relative mt-4 flex h-9 items-center justify-center">
+        {leadCaptured && (
+          <div className="flex items-center gap-1.5 whitespace-nowrap bg-white border border-emerald-200 shadow-lg rounded-full px-3.5 py-2 text-xs font-semibold text-emerald-700 animate-bubble-in">
+            <CheckCircle2 size={14} className="text-emerald-500" />
+            Lead capturado automaticamente
+          </div>
+        )}
+      </div>
     </div>
   );
 }
