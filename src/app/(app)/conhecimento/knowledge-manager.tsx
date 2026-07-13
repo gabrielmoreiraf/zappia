@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Eye, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -51,6 +51,7 @@ export function KnowledgeManager({ courses }: { courses: Course[] }) {
     null,
   );
   const [status, setStatus] = useState<Course["status"]>("confirmar_com_equipe");
+  const [viewing, setViewing] = useState<Course | null>(null);
 
   function openEdit(course: Course, isNew: boolean) {
     setStatus(course.status);
@@ -131,6 +132,15 @@ export function KnowledgeManager({ courses }: { courses: Course[] }) {
                       {info(c)}
                     </div>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 text-slate-400"
+                    onClick={() => setViewing(c)}
+                    aria-label="Ver"
+                  >
+                    <Eye size={15} />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -278,6 +288,75 @@ export function KnowledgeManager({ courses }: { courses: Course[] }) {
                 )}
               </div>
             </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!viewing} onOpenChange={(o) => !o && setViewing(null)}>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+          {viewing && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  {viewing.nome}
+                  {viewing.origem === "ia" && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 flex items-center gap-0.5">
+                      <Sparkles size={10} /> IA
+                    </span>
+                  )}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 text-sm">
+                <div className="flex flex-wrap gap-2">
+                  <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-medium">
+                    {viewing.categoria || "Geral"}
+                  </span>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      viewing.status === "confirmado"
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    {viewing.status === "confirmado" ? "Confirmado" : "A confirmar"}
+                  </span>
+                  {viewing.valor && (
+                    <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-medium">
+                      {viewing.valor}
+                    </span>
+                  )}
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      viewing.ativo
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-slate-100 text-slate-400"
+                    }`}
+                  >
+                    {viewing.ativo ? "Ativo" : "Desativado"}
+                  </span>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">
+                    O que a IA sabe
+                  </div>
+                  <p className="text-slate-700 whitespace-pre-wrap">
+                    {viewing.descricao || "Nada além do nome e categoria."}
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const c = viewing;
+                    setViewing(null);
+                    openEdit(c, false);
+                  }}
+                >
+                  <Pencil size={14} /> Editar
+                </Button>
+              </div>
+            </>
           )}
         </DialogContent>
       </Dialog>

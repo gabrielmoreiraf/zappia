@@ -1,6 +1,7 @@
 import { and, count, desc, eq, gte, inArray, lt } from "drizzle-orm";
 import { db } from "./index";
 import {
+  clients,
   conversations,
   dismissedNotifications,
   leads,
@@ -163,66 +164,59 @@ export async function getDashboard(clientId: string): Promise<DashboardData> {
 
 export interface NotificationItem {
   id: string;
-  type: "handoff" | "lead" | "conversa";
+  type: "handoff" | "lead" | "fatura";
   title: string;
   sub: string;
   href: string;
   at: Date;
 }
 
+const INVOICE_DUE_SOON_DAYS = 5;
+
+/**
+ * Só eventos que realmente precisam da atenção do dono: lead novo, conversa
+ * aguardando humano, e fatura perto de vencer. Mensagens que a própria IA (ou
+ * o humano) já respondeu normalmente NÃO viram notificação — isso não é
+ * evento, é o sistema funcionando.
+ */
 export async function getNotifications(
   clientId: string,
 ): Promise<{ items: NotificationItem[]; count: number }> {
-  // Conversas recentes (com preview da última mensagem).
-  const convos = await db
-    .select()
-    .from(conversations)
-    .where(eq(conversations.clientId, clientId))
-    .orderBy(desc(conversations.lastMessageAt))
-    .limit(10);
-
-  const lastByConv = new Map<string, string>();
-  const ids = convos.map((c) => c.id);
-  if (ids.length) {
-    const msgs = await db
+  const [awaitingHuman, recentLeads, [client]] = await Promise.all([
+    db
+      .select()
+      .from(conversations)
+      .where(
+        and(eq(conversations.clientId, clientId), eq(conversations.status, "novo")),
+      )
+      .orderBy(desc(conversations.lastMessageAt))
+      .limit(10),
+    db
+      .select()
+      .from(leads)
+      .where(eq(leads.clientId, clientId))
+      .orderBy(desc(leads.createdAt))
+      .limit(10),
+    db
       .select({
-        conversationId: messages.conversationId,
-        text: messages.text,
-        from: messages.from,
+        subscriptionDueDate: clients.subscriptionDueDate,
+        subscriptionStatus: clients.subscriptionStatus,
+        lifetimeAccess: clients.lifetimeAccess,
       })
-      .from(messages)
-      .where(inArray(messages.conversationId, ids))
-      .orderBy(desc(messages.createdAt));
-    for (const m of msgs) {
-      if (!lastByConv.has(m.conversationId)) {
-        lastByConv.set(m.conversationId, `${m.from === "them" ? "" : "Você: "}${m.text}`);
-      }
-    }
-  }
-
-  const recentLeads = await db
-    .select()
-    .from(leads)
-    .where(eq(leads.clientId, clientId))
-    .orderBy(desc(leads.createdAt))
-    .limit(10);
+      .from(clients)
+      .where(eq(clients.id, clientId))
+      .limit(1),
+  ]);
 
   const built: NotificationItem[] = [
-    ...convos.map((c) => {
-      const name = c.contactName ?? "Contato";
-      const isHandoff = c.status === "novo";
-      return {
-        // inclui o timestamp: nova mensagem = nova notificação (reaparece).
-        id: `c-${c.id}-${c.lastMessageAt.getTime()}`,
-        type: (isHandoff ? "handoff" : "conversa") as "handoff" | "conversa",
-        title: isHandoff ? `${name} precisa de você` : `Mensagem de ${name}`,
-        sub: isHandoff
-          ? "Conversa encaminhada pela IA"
-          : (lastByConv.get(c.id) ?? "Conversa no WhatsApp"),
-        href: `/conversas?c=${c.id}`,
-        at: c.lastMessageAt,
-      };
-    }),
+    ...awaitingHuman.map((c) => ({
+      id: `c-${c.id}-${c.lastMessageAt.getTime()}`,
+      type: "handoff" as const,
+      title: `${c.contactName ?? "Contato"} precisa de você`,
+      sub: "Conversa encaminhada pela IA",
+      href: `/conversas?c=${c.id}`,
+      at: c.lastMessageAt,
+    })),
     ...recentLeads.map((l) => ({
       id: `l-${l.id}`,
       type: "lead" as const,
@@ -231,7 +225,34 @@ export async function getNotifications(
       href: "/leads",
       at: l.createdAt,
     })),
-  ].sort((a, b) => b.at.getTime() - a.at.getTime());
+  ];
+
+  if (
+    client &&
+    !client.lifetimeAccess &&
+    client.subscriptionStatus === "active" &&
+    client.subscriptionDueDate
+  ) {
+    const daysLeft = Math.ceil(
+      (client.subscriptionDueDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000),
+    );
+    if (daysLeft >= 0 && daysLeft <= INVOICE_DUE_SOON_DAYS) {
+      built.push({
+        // chave por dia: não repete a cada refresh, só quando o dia muda.
+        id: `f-${clientId}-${client.subscriptionDueDate.toISOString().slice(0, 10)}`,
+        type: "fatura",
+        title:
+          daysLeft === 0
+            ? "Sua fatura vence hoje"
+            : `Sua fatura vence em ${daysLeft} dia${daysLeft > 1 ? "s" : ""}`,
+        sub: "Toque pra ver os detalhes do plano",
+        href: "/config",
+        at: new Date(),
+      });
+    }
+  }
+
+  built.sort((a, b) => b.at.getTime() - a.at.getTime());
 
   // Remove as dispensadas.
   const dismissed = new Set(
@@ -398,4 +419,17 @@ export async function getLeads(
     ? and(eq(leads.clientId, clientId), eq(leads.status, status))
     : eq(leads.clientId, clientId);
   return db.select().from(leads).where(where).orderBy(desc(leads.createdAt));
+}
+
+/** Só os leads escolhidos (exportação seletiva), sempre restrito ao cliente. */
+export async function getLeadsByIds(
+  clientId: string,
+  ids: string[],
+): Promise<Lead[]> {
+  if (ids.length === 0) return [];
+  return db
+    .select()
+    .from(leads)
+    .where(and(eq(leads.clientId, clientId), inArray(leads.id, ids)))
+    .orderBy(desc(leads.createdAt));
 }

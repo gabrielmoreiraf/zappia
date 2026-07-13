@@ -7,8 +7,8 @@ import { signOut } from "next-auth/react";
 import {
   Bell,
   Bot,
+  CreditCard,
   LogOut,
-  MessageSquare,
   Search,
   Settings,
   Users,
@@ -49,6 +49,23 @@ export function Topbar({
   const router = useRouter();
   const [items, setItems] = useState(notifications);
   useEffect(() => setItems(notifications), [notifications]);
+
+  // Notificações são eventos reais (lead, handoff, fatura): faz polling pra
+  // aparecer sem precisar recarregar a página.
+  useEffect(() => {
+    if (!hasClient) return;
+    const id = setInterval(async () => {
+      try {
+        const res = await fetch("/api/notifications", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as { items: NotificationItem[] };
+        setItems(data.items);
+      } catch {
+        // silencioso, tenta de novo no próximo ciclo
+      }
+    }, 15000);
+    return () => clearInterval(id);
+  }, [hasClient]);
 
   function onSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -136,7 +153,7 @@ export function Topbar({
                               ? "bg-amber-50 text-amber-600"
                               : n.type === "lead"
                                 ? "bg-emerald-50 text-emerald-600"
-                                : "bg-sky-50 text-sky-600"
+                                : "bg-red-50 text-red-600"
                           }`}
                         >
                           {n.type === "handoff" ? (
@@ -144,7 +161,7 @@ export function Topbar({
                           ) : n.type === "lead" ? (
                             <Users size={15} />
                           ) : (
-                            <MessageSquare size={15} />
+                            <CreditCard size={15} />
                           )}
                         </span>
                         <span className="min-w-0 flex-1">

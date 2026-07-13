@@ -1,39 +1,74 @@
 import { getCurrentClient } from "@/lib/current-client";
-import { getLeads } from "@/db/panel";
+import { getCurrentUser } from "@/lib/current-user";
+import { getLeads, getLeadsByIds } from "@/db/panel";
+import { buildBrandedTablePdf } from "@/lib/pdf-export";
+import { LEAD_STATUS } from "@/app/(app)/ui";
 
 export const runtime = "nodejs";
 
-function csvCell(v: string | null | undefined): string {
-  const s = (v ?? "").replace(/"/g, '""');
-  return `"${s}"`;
-}
+const CHANNEL_LABEL: Record<string, string> = {
+  anuncio: "Anúncio",
+  organico: "Orgânico",
+};
 
-export async function GET() {
-  const client = await getCurrentClient();
+const STATUS_FILTER_LABEL: Record<string, string> = {
+  novo: "Novos",
+  contato: "Em contato",
+  matriculado: "Convertidos",
+};
+
+export async function GET(req: Request) {
+  const [client, user] = await Promise.all([getCurrentClient(), getCurrentUser()]);
   if (!client) {
     return new Response("Nenhum cliente ativo", { status: 400 });
   }
-  const rows = await getLeads(client.id);
 
-  const header = ["Nome", "Interesse", "Canal", "Status", "Data"];
-  const lines = [header.join(",")];
-  for (const l of rows) {
-    lines.push(
-      [
-        csvCell(l.contactName),
-        csvCell(l.courseInterest),
-        csvCell(l.channel),
-        csvCell(l.status),
-        csvCell(new Date(l.createdAt).toISOString()),
-      ].join(","),
-    );
+  const url = new URL(req.url);
+  const idsParam = url.searchParams.get("ids");
+  const st = url.searchParams.get("st") ?? "";
+
+  let leads;
+  let subtitle: string;
+  if (idsParam) {
+    const ids = idsParam.split(",").filter(Boolean);
+    leads = await getLeadsByIds(client.id, ids);
+    subtitle = `${leads.length} lead${leads.length === 1 ? "" : "s"} selecionado${leads.length === 1 ? "" : "s"}`;
+  } else {
+    const status =
+      st === "novo" || st === "contato" || st === "matriculado" ? st : undefined;
+    leads = await getLeads(client.id, status);
+    subtitle = status
+      ? `${leads.length} lead${leads.length === 1 ? "" : "s"} · filtro: ${STATUS_FILTER_LABEL[status]}`
+      : `${leads.length} contato${leads.length === 1 ? "" : "s"} capturado${leads.length === 1 ? "" : "s"} pela IA`;
   }
-  const csv = "﻿" + lines.join("\n"); // BOM p/ Excel abrir acentos
 
-  return new Response(csv, {
+  const pdf = await buildBrandedTablePdf({
+    title: "Leads",
+    subtitle,
+    clientName: client.name,
+    clientLogoDataUrl: client.logoUrl,
+    exportedByName: user?.name ?? "Usuário",
+    exportedByEmail: user?.email ?? "-",
+    columns: [
+      { label: "Nome", width: 110 },
+      { label: "Interesse", width: 140 },
+      { label: "Canal", width: 70 },
+      { label: "Status", width: 80 },
+      { label: "Data", width: 85 },
+    ],
+    rows: leads.map((l) => [
+      l.contactName ?? "-",
+      l.courseInterest ?? "-",
+      CHANNEL_LABEL[l.channel] ?? l.channel,
+      LEAD_STATUS[l.status]?.label ?? l.status,
+      new Date(l.createdAt).toLocaleDateString("pt-BR"),
+    ]),
+  });
+
+  return new Response(new Uint8Array(pdf), {
     headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="leads-zappia.csv"`,
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="leads-${client.name.toLowerCase().replace(/\s+/g, "-")}.pdf"`,
     },
   });
 }

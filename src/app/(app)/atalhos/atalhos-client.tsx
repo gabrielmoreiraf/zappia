@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus, Trash2, Zap } from "lucide-react";
+import { Eye, Pencil, Plus, Trash2, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +31,7 @@ export function AtalhosClient({ items }: { items: QuickReplyItem[] }) {
   const [pending, start] = useTransition();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<QuickReplyItem | null>(null);
+  const [viewing, setViewing] = useState<QuickReplyItem | null>(null);
   const [shortcut, setShortcut] = useState("");
   const [message, setMessage] = useState("");
   const messageRef = useRef<HTMLTextAreaElement>(null);
@@ -116,6 +117,16 @@ export function AtalhosClient({ items }: { items: QuickReplyItem[] }) {
                 size="icon"
                 className="size-8 text-slate-400"
                 disabled={pending}
+                onClick={() => setViewing(item)}
+                aria-label="Ver"
+              >
+                <Eye size={15} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 text-slate-400"
+                disabled={pending}
                 onClick={() => openEdit(item)}
                 aria-label="Editar"
               >
@@ -180,6 +191,33 @@ export function AtalhosClient({ items }: { items: QuickReplyItem[] }) {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!viewing} onOpenChange={(o) => !o && setViewing(null)}>
+        <DialogContent>
+          {viewing && (
+            <>
+              <DialogHeader>
+                <DialogTitle>/{viewing.shortcut}</DialogTitle>
+              </DialogHeader>
+              <div className="text-sm text-slate-700 whitespace-pre-wrap bg-slate-50 rounded-lg p-3 border border-slate-100">
+                <WhatsappText text={viewing.message} />
+              </div>
+              <div className="flex justify-end pt-1">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const item = viewing;
+                    setViewing(null);
+                    openEdit(item);
+                  }}
+                >
+                  <Pencil size={14} /> Editar
+                </Button>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
