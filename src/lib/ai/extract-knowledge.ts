@@ -21,13 +21,13 @@ const SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["nome", "categoria", "status", "valor", "observacao"],
+        required: ["nome", "categoria", "status", "valor", "descricao"],
         properties: {
           nome: { type: "string" },
           categoria: { type: "string" },
           status: { type: "string", enum: ["confirmado", "confirmar_com_equipe"] },
           valor: { type: ["string", "null"] },
-          observacao: { type: ["string", "null"] },
+          descricao: { type: ["string", "null"] },
         },
       },
     },
@@ -39,7 +39,7 @@ interface RawItem {
   categoria: string;
   status: "confirmado" | "confirmar_com_equipe";
   valor: string | null;
-  observacao: string | null;
+  descricao: string | null;
 }
 
 /**
@@ -62,7 +62,7 @@ Regras:
 - "categoria": agrupe pelo tipo real do negócio descrito no texto (ex.: "Bebidas", "Consultas", "Cortes de cabelo", "Peças", "Cursos", o que fizer sentido pro ramo). Se não der pra inferir, use "Geral". Use a MESMA categoria para itens do mesmo tipo.
 - "valor": só preencha se o texto disser um preço explícito (ex.: "R$ 390"); senão null.
 - "status": "confirmado" só quando houver preço/dado concreto no texto; caso contrário "confirmar_com_equipe".
-- "observacao": um detalhe curto e útil se houver (ex.: "entrega em 24h", "só sob encomenda", "duração de 1h"); senão null.
+- "descricao": reúna em texto corrido tudo de útil que o texto original disser sobre esse item (características, condição de entrega/prazo, restrições, como apresentar). Pode ter mais de uma frase se o texto tiver detalhe; se não houver nada além do nome, use null. NÃO invente detalhe que não esteja no texto original.
 - Se o texto não tiver nenhum item claro, devolva { "itens": [] }.`;
 
   const resp = await anthropic().messages.create({
@@ -94,7 +94,7 @@ Regras:
       status: i.status === "confirmado" ? "confirmado" : "confirmar_com_equipe",
       categoria: (i.categoria || "Geral").trim() || "Geral",
       valor: i.valor?.trim() || undefined,
-      observacao: i.observacao?.trim() || undefined,
+      descricao: i.descricao?.trim() || undefined,
       ativo: true,
       origem: "ia" as const,
     }));

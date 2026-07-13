@@ -18,7 +18,7 @@ import type { Course } from "@/lib/knowledge-base";
 function meta(c: Course): string {
   const parts = [c.categoria || "Geral"];
   if (c.status === "confirmado" && c.valor) parts.push(c.valor);
-  if (c.observacao) parts.push(c.observacao);
+  if (c.descricao) parts.push(c.descricao.split("\n")[0]);
   return parts.join(" · ");
 }
 

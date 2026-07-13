@@ -184,6 +184,82 @@ export async function uploadProfilePicture(
   return h;
 }
 
+/** Sobe um arquivo (imagem ou documento) pra Meta e devolve o media id, usado
+ * em sendImageMessage/sendDocumentMessage. Endpoint de mídia de mensagem
+ * comum (diferente do Resumable Upload usado só pra foto de perfil). */
+export async function uploadMedia(
+  phoneNumberId: string,
+  bytes: Buffer,
+  mimeType: string,
+  filename: string,
+): Promise<string> {
+  const form = new FormData();
+  form.append("messaging_product", "whatsapp");
+  // Buffer não bate exatamente com o BlobPart do lib DOM; mesmo caso do cast
+  // em uploadProfilePicture.
+  form.append(
+    "file",
+    new Blob([bytes as unknown as BlobPart], { type: mimeType }),
+    filename,
+  );
+
+  const r = await fetch(`${GRAPH}/${VERSION}/${phoneNumberId}/media`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${env.whatsappToken}` },
+    body: form,
+  });
+  if (!r.ok) throw new Error(`uploadMedia ${r.status}: ${await r.text()}`);
+  const { id } = (await r.json()) as { id: string };
+  return id;
+}
+
+/** Envia uma imagem já enviada via uploadMedia. */
+export async function sendImageMessage(
+  phoneNumberId: string,
+  to: string,
+  mediaId: string,
+): Promise<void> {
+  const r = await fetch(`${GRAPH}/${VERSION}/${phoneNumberId}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.whatsappToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "image",
+      image: { id: mediaId },
+    }),
+  });
+  if (!r.ok) throw new Error(`sendImageMessage ${r.status}: ${await r.text()}`);
+}
+
+/** Envia um documento (PDF etc.) já enviado via uploadMedia. */
+export async function sendDocumentMessage(
+  phoneNumberId: string,
+  to: string,
+  mediaId: string,
+  filename: string,
+): Promise<void> {
+  const r = await fetch(`${GRAPH}/${VERSION}/${phoneNumberId}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.whatsappToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to,
+      type: "document",
+      document: { id: mediaId, filename },
+    }),
+  });
+  if (!r.ok) throw new Error(`sendDocumentMessage ${r.status}: ${await r.text()}`);
+}
+
 /** Passo 9 do pipeline: envia a resposta de texto ao cliente final. */
 export async function sendText(
   phoneNumberId: string,

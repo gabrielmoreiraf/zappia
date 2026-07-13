@@ -12,7 +12,12 @@ import {
 } from "@/lib/knowledge-base";
 import { extractCourses } from "@/lib/ai/extract-knowledge";
 import { runHaiku, improveDraftText, type HistoryTurn } from "@/lib/ai/haiku";
-import { sendText } from "@/lib/whatsapp";
+import {
+  sendText,
+  uploadMedia,
+  sendImageMessage,
+  sendDocumentMessage,
+} from "@/lib/whatsapp";
 import { logUsage } from "@/db/queries";
 import { parseBusinessHours, serializeBusinessHours } from "@/lib/business-hours";
 
@@ -90,6 +95,74 @@ export async function sendReply(conversationId: string, text: string) {
   }
 
   revalidatePath("/conversas");
+}
+
+const MAX_MEDIA_BYTES = 10 * 1024 * 1024; // 10MB
+
+/** Envio manual de anexo (imagem ou PDF). Sobe pra Meta, envia e grava. */
+export async function sendMediaReply(
+  conversationId: string,
+  dataUrl: string,
+  filename: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const client = await getCurrentClient();
+  if (!client) return { ok: false, error: "Sessão expirada." };
+  if (!client.whatsappPhoneId || client.whatsappPhoneId.startsWith("PENDENTE")) {
+    return { ok: false, error: "Conecte o WhatsApp pra enviar anexos." };
+  }
+
+  const match = /^data:([^;]+);base64,(.+)$/.exec(dataUrl);
+  if (!match) return { ok: false, error: "Arquivo inválido." };
+  const [, mimeType, base64] = match;
+  const isImage = mimeType.startsWith("image/");
+  const isPdf = mimeType === "application/pdf";
+  if (!isImage && !isPdf) {
+    return { ok: false, error: "Só aceita imagem ou PDF." };
+  }
+  const bytes = Buffer.from(base64, "base64");
+  if (bytes.length > MAX_MEDIA_BYTES) {
+    return { ok: false, error: "Arquivo muito grande (máximo 10MB)." };
+  }
+
+  const [convo] = await db
+    .select()
+    .from(conversations)
+    .where(
+      and(
+        eq(conversations.id, conversationId),
+        eq(conversations.clientId, client.id),
+      ),
+    )
+    .limit(1);
+  if (!convo) return { ok: false, error: "Conversa não encontrada." };
+
+  try {
+    const mediaId = await uploadMedia(client.whatsappPhoneId, bytes, mimeType, filename);
+    if (isImage) {
+      await sendImageMessage(client.whatsappPhoneId, convo.contactPhone, mediaId);
+    } else {
+      await sendDocumentMessage(client.whatsappPhoneId, convo.contactPhone, mediaId, filename);
+    }
+  } catch (err) {
+    console.error("[sendMediaReply] envio via WhatsApp falhou:", err);
+    return { ok: false, error: "Não foi possível enviar o arquivo agora." };
+  }
+
+  await db.insert(messages).values({
+    conversationId,
+    from: "you",
+    text: "",
+    mediaUrl: dataUrl,
+    mediaType: isImage ? "image" : "document",
+    mediaFilename: isImage ? null : filename,
+  });
+  await db
+    .update(conversations)
+    .set({ status: "voce", lastMessageAt: new Date(), unreadCount: 0 })
+    .where(eq(conversations.id, conversationId));
+
+  revalidatePath("/conversas");
+  return { ok: true };
 }
 
 /**
@@ -260,8 +333,7 @@ export async function upsertCourse(formData: FormData) {
     status,
     categoria: String(formData.get("categoria") ?? "Geral").trim(),
     valor: String(formData.get("valor") ?? "").trim() || undefined,
-    cargaHoraria: String(formData.get("cargaHoraria") ?? "").trim() || undefined,
-    observacao: String(formData.get("observacao") ?? "").trim() || undefined,
+    descricao: String(formData.get("descricao") ?? "").trim() || undefined,
     ativo: formData.get("ativo") != null,
     // Ao editar/adicionar na mão, o item passa a ser "seu" (some o selo da IA).
     origem: "manual",

@@ -35,6 +35,13 @@ interface WhatsAppWebhookBody {
           type: string;
           text?: { body?: string };
           audio?: { id?: string };
+          image?: { id?: string; mime_type?: string; caption?: string };
+          document?: {
+            id?: string;
+            mime_type?: string;
+            caption?: string;
+            filename?: string;
+          };
         }>;
       };
     }>;
@@ -76,6 +83,10 @@ export async function POST(req: Request) {
           type: m.type,
           text: m.text?.body,
           audioId: m.audio?.id,
+          mediaId: m.image?.id ?? m.document?.id,
+          mediaMimeType: m.image?.mime_type ?? m.document?.mime_type,
+          mediaCaption: m.image?.caption ?? m.document?.caption,
+          mediaFilename: m.document?.filename,
         };
         try {
           await processInbound(inbound);

@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { deleteCourse, toggleCourse, upsertCourse } from "../actions";
 import { groupCourses, type Course } from "@/lib/knowledge-base";
 
@@ -59,7 +60,7 @@ export function KnowledgeManager({ courses }: { courses: Course[] }) {
   function info(c: Course): string {
     const parts = [c.categoria || "Geral"];
     if (c.status === "confirmado" && c.valor) parts.push(c.valor);
-    if (c.observacao) parts.push(c.observacao);
+    if (c.descricao) parts.push(c.descricao.split("\n")[0]);
     return parts.join(" · ");
   }
 
@@ -156,14 +157,18 @@ export function KnowledgeManager({ courses }: { courses: Course[] }) {
         open={!!editing}
         onOpenChange={(o) => !o && setEditing(null)}
       >
-        <DialogContent>
+        <DialogContent className="sm:max-w-xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editing?.isNew ? "Adicionar item" : "Editar item"}
             </DialogTitle>
+            <p className="text-xs text-muted-foreground">
+              Cada item vira um pedaço da base que a IA usa pra responder. Quanto
+              mais você explicar, melhor ela conduz a conversa.
+            </p>
           </DialogHeader>
           {editing && (
-            <form onSubmit={submit} className="space-y-3">
+            <form onSubmit={submit} className="space-y-4">
               <input
                 type="hidden"
                 name="originalNome"
@@ -177,6 +182,7 @@ export function KnowledgeManager({ courses }: { courses: Course[] }) {
                   required
                   defaultValue={editing.course.nome}
                   placeholder="Ex.: Cimento CP-II 50kg"
+                  className="text-base"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -213,34 +219,38 @@ export function KnowledgeManager({ courses }: { courses: Course[] }) {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-2">
-                  <Label htmlFor="valor">Preço (só se confirmado)</Label>
-                  <Input
-                    id="valor"
-                    name="valor"
-                    defaultValue={editing.course.valor ?? ""}
-                    placeholder="R$ 39,90"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="cargaHoraria">Detalhe</Label>
-                  <Input
-                    id="cargaHoraria"
-                    name="cargaHoraria"
-                    defaultValue={editing.course.cargaHoraria ?? ""}
-                    placeholder="Ex.: em estoque"
-                  />
-                </div>
+              <div className="grid gap-2">
+                <Label htmlFor="valor">Preço (opcional)</Label>
+                <Input
+                  id="valor"
+                  name="valor"
+                  defaultValue={editing.course.valor ?? ""}
+                  placeholder="R$ 39,90"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Deixe em branco se esse item não tiver preço fixo ou se for
+                  sempre consultado com a equipe. A IA nunca inventa um valor.
+                </p>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="observacao">Observação</Label>
-                <Input
-                  id="observacao"
-                  name="observacao"
-                  defaultValue={editing.course.observacao ?? ""}
-                  placeholder="entrega em 24h"
+                <Label htmlFor="descricao">
+                  O que a IA deve saber e como falar sobre isso
+                </Label>
+                <Textarea
+                  id="descricao"
+                  name="descricao"
+                  rows={6}
+                  defaultValue={editing.course.descricao ?? ""}
+                  placeholder={
+                    'Explique com suas palavras, como se fosse treinar um atendente novo. Ex.: "Cimento de uso geral, ideal pra estrutura e alvenaria. Aguenta sol e chuva no estoque. Se perguntarem sobre frete, avisa que calculamos pelo CEP. Não vendemos menos de um saco."'
+                  }
+                  className="resize-y"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Pode escrever várias frases: detalhes, como apresentar, o que
+                  perguntar de volta, restrições. A IA só afirma como fato o que
+                  estiver escrito aqui.
+                </p>
               </div>
               <label className="flex items-center gap-2 text-sm text-slate-700">
                 <Switch name="ativo" defaultChecked={editing.course.ativo} />

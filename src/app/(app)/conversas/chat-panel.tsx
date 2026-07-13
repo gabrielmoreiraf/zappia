@@ -2,23 +2,44 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bot, Mic, Send, Sparkles, Users, Wand2, Zap } from "lucide-react";
+import {
+  ArrowLeft,
+  Bot,
+  Download,
+  FileText,
+  Mic,
+  Paperclip,
+  Send,
+  Sparkles,
+  Users,
+  Wand2,
+  Zap,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { WhatsappFormatToolbar } from "@/components/whatsapp-format-toolbar";
+import { WhatsappText } from "@/components/whatsapp-text";
 import {
   assumirConversa,
   devolverParaIA,
+  sendMediaReply,
   sendReply,
   suggestReplyImprovement,
 } from "../actions";
 import { initials, timeShort } from "@/lib/format";
+
+const MAX_MEDIA_BYTES = 10 * 1024 * 1024; // 10MB, bate com o limite do servidor
 
 export interface ChatMessage {
   id: string;
   from: "them" | "bot" | "you";
   text: string;
   isAudio: boolean;
+  mediaUrl?: string | null;
+  mediaType?: string | null;
+  mediaFilename?: string | null;
   createdAt: string | Date;
 }
 
@@ -49,8 +70,11 @@ export function ChatPanel({
   const [pending, start] = useTransition();
   const [improving, startImproving] = useTransition();
   const [draft, setDraft] = useState("");
+  const [uploadingFile, startUpload] = useTransition();
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-scroll pro final quando chega mensagem nova (ou troca de conversa).
   const lastMessageId = messages[messages.length - 1]?.id;
@@ -103,6 +127,35 @@ export function ChatPanel({
       await onChanged?.();
     });
   }
+  function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const isImage = file.type.startsWith("image/");
+    const isPdf = file.type === "application/pdf";
+    if (!isImage && !isPdf) {
+      toast.error("Só é possível anexar imagem ou PDF.");
+      return;
+    }
+    if (file.size > MAX_MEDIA_BYTES) {
+      toast.error("Arquivo muito grande (máximo 10MB).");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      startUpload(async () => {
+        const res = await sendMediaReply(conversation.id, dataUrl, file.name);
+        if (res.ok) {
+          await onChanged?.();
+        } else {
+          toast.error(res.error ?? "Não foi possível enviar o arquivo.");
+        }
+      });
+    };
+    reader.readAsDataURL(file);
+  }
+
   function sugerirMelhoria() {
     const text = draft.trim();
     if (!text) return;
@@ -193,7 +246,33 @@ export function ChatPanel({
                 {isYou && (
                   <div className="text-[11px] text-sky-100 mb-0.5">Você</div>
                 )}
-                {m.text}
+                {m.mediaType === "image" && m.mediaUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={m.mediaUrl}
+                    alt="Imagem enviada"
+                    className="max-w-full max-h-64 rounded-lg cursor-zoom-in mb-1"
+                    onClick={() => setViewingImage(m.mediaUrl!)}
+                  />
+                )}
+                {m.mediaType === "document" && m.mediaUrl && (
+                  <a
+                    href={m.mediaUrl}
+                    download={m.mediaFilename ?? "arquivo.pdf"}
+                    className={`flex items-center gap-2 rounded-lg px-2.5 py-2 mb-1 text-xs font-medium ${
+                      mine ? "bg-black/10" : "bg-slate-50 border border-slate-200"
+                    }`}
+                  >
+                    <FileText size={16} className="shrink-0" />
+                    <span className="truncate flex-1">{m.mediaFilename ?? "Documento"}</span>
+                    <Download size={13} className="shrink-0" />
+                  </a>
+                )}
+                {m.text && (
+                  <span className="whitespace-pre-wrap">
+                    <WhatsappText text={m.text} />
+                  </span>
+                )}
                 <div
                   className={`text-[10px] mt-1 ${mine ? "text-white/70" : "text-slate-400"}`}
                 >
@@ -224,14 +303,39 @@ export function ChatPanel({
                     /{q.shortcut}
                   </div>
                   <div className="text-xs text-slate-500 truncate">
-                    {q.message}
+                    <WhatsappText text={q.message} />
                   </div>
                 </div>
               </button>
             ))}
           </div>
         )}
+        <div className="flex items-center justify-between mb-1.5 px-0.5">
+          <WhatsappFormatToolbar
+            value={draft}
+            onChange={setDraft}
+            targetRef={inputRef}
+          />
+        </div>
         <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,application/pdf"
+            className="hidden"
+            onChange={onPickFile}
+          />
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingFile}
+            aria-label="Anexar imagem ou PDF"
+            title="Anexar imagem ou PDF"
+          >
+            <Paperclip size={16} className={uploadingFile ? "animate-pulse" : ""} />
+          </Button>
           <Input
             ref={inputRef}
             value={draft}
@@ -255,6 +359,16 @@ export function ChatPanel({
           </Button>
         </div>
       </form>
+
+      <Dialog open={!!viewingImage} onOpenChange={(o) => !o && setViewingImage(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogTitle className="sr-only">Imagem</DialogTitle>
+          {viewingImage && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={viewingImage} alt="" className="w-full rounded-xl" />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

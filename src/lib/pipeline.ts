@@ -22,15 +22,23 @@ import {
 // cada N minutos (tranquiliza 1x e silencia nos "oi?/eai?" seguidos).
 const WAIT_REASSURE_MIN = 15;
 
+// Mídia recebida maior que isso não é guardada (evita inchar o banco); a
+// conversa segue normalmente, só sem o anexo pra visualizar no painel.
+const MAX_INBOUND_MEDIA_BYTES = 10 * 1024 * 1024;
+
 /** Mensagem recebida, já extraída do payload do webhook. */
 export interface InboundMessage {
   phoneNumberId: string; // value.metadata.phone_number_id
   waMessageId: string; // message.id (idempotência)
   from: string; // telefone do contato
   contactName?: string | null;
-  type: string; // "text" | "audio" | ...
+  type: string; // "text" | "audio" | "image" | "document" | ...
   text?: string;
   audioId?: string;
+  mediaId?: string; // id da imagem/documento (Cloud API)
+  mediaMimeType?: string;
+  mediaCaption?: string;
+  mediaFilename?: string; // só documento
 }
 
 export interface PipelineResult {
@@ -52,10 +60,14 @@ export async function processInbound(
   // idempotência
   if (await messageExistsByWaId(msg.waMessageId)) return { status: "duplicate" };
 
-  // 3. conteúdo (transcreve áudio se for o caso)
+  // 3. conteúdo (transcreve áudio, baixa imagem/documento, se for o caso)
   let text = msg.text?.trim() ?? "";
   let isAudio = false;
   let audioSeconds = 0;
+  let mediaUrl: string | undefined;
+  let mediaType: "image" | "document" | undefined;
+  let mediaFilename: string | undefined;
+
   if (msg.type === "audio" && msg.audioId) {
     const url = await getMediaUrl(msg.audioId);
     const bytes = await downloadMedia(url);
@@ -63,6 +75,27 @@ export async function processInbound(
     text = tr.text;
     isAudio = true;
     audioSeconds = tr.seconds;
+  } else if ((msg.type === "image" || msg.type === "document") && msg.mediaId) {
+    mediaType = msg.type === "image" ? "image" : "document";
+    mediaFilename = msg.mediaFilename;
+    try {
+      const url = await getMediaUrl(msg.mediaId);
+      const bytes = await downloadMedia(url);
+      if (bytes.length <= MAX_INBOUND_MEDIA_BYTES) {
+        const mime =
+          msg.mediaMimeType || (mediaType === "image" ? "image/jpeg" : "application/pdf");
+        mediaUrl = `data:${mime};base64,${bytes.toString("base64")}`;
+      }
+    } catch (err) {
+      console.error("[pipeline] download de mídia recebida falhou:", err);
+    }
+    // A IA não enxerga o conteúdo do arquivo; o texto avisa isso pra ela
+    // reagir com naturalidade (ver seção IMAGENS E ARQUIVOS do prompt).
+    text =
+      msg.mediaCaption?.trim() ||
+      (mediaType === "image"
+        ? "[o cliente enviou uma imagem; você não consegue ver o conteúdo dela]"
+        : `[o cliente enviou um arquivo${mediaFilename ? ` (${mediaFilename})` : ""}; você não consegue ver o conteúdo dele]`);
   }
   if (!text) return { status: "unsupported" };
 
@@ -78,6 +111,9 @@ export async function processInbound(
     from: "them",
     text,
     isAudio,
+    mediaUrl,
+    mediaType,
+    mediaFilename,
     waMessageId: msg.waMessageId,
   });
 
@@ -123,26 +159,14 @@ export async function processInbound(
     await touchConversation(convo.id, { outOfHoursNotified: false });
   }
 
-  // Aguardando atendimento humano: a IA NÃO improvisa. Manda a mensagem de
-  // "alta demanda" (tranquiliza), mas só se faz um tempo desde a última resposta
-  // nossa, assim não repete a cada "oi?/eai?".
-  if (convo.status === "novo") {
-    await touchConversation(convo.id, { incUnread: 1 });
-    const waiting = client.waitingMessage?.trim();
-    const lastOut = await getLastOutboundAt(convo.id);
-    const stale =
-      !lastOut || Date.now() - lastOut.getTime() > WAIT_REASSURE_MIN * 60_000;
-    if (waiting && stale) {
-      await insertMessage({ conversationId: convo.id, from: "bot", text: waiting });
-      await touchConversation(convo.id, { lastMessageAt: new Date() });
-      try {
-        await sendText(msg.phoneNumberId, msg.from, waiting);
-      } catch (err) {
-        console.error("[pipeline] envio da mensagem de espera falhou:", err);
-      }
-    }
-    return { status: "handled_by_human" };
-  }
+  // Aguardando atendimento humano: a IA NÃO desliga sozinha. Ela só sai de vez
+  // quando um humano realmente assume (status "voce"); até lá continua
+  // ajudando normalmente (a REGRA DE OURO do prompt já cuida de dizer "vou
+  // confirmar com a equipe" quando não sabe). Guarda o timestamp de antes
+  // dessa mensagem pra decidir, depois da resposta da IA, se cabe reforçar
+  // com a mensagem de "alta demanda".
+  const wasAwaitingHuman = convo.status === "novo";
+  const lastOutBefore = wasAwaitingHuman ? await getLastOutboundAt(convo.id) : null;
 
   // 4-5. monta prompt + histórico e chama o Haiku
   const contactName = convo.contactName ?? msg.contactName ?? null;
@@ -162,14 +186,17 @@ export async function processInbound(
     confidence: output.confidence,
   });
 
-  // Aqui a conversa está sempre em "ia" (as "novo"/"voce" já retornaram acima),
-  // então qualquer handoff da IA é uma transição nova → notifica o dono.
-  const newHandoff = output.handoff;
+  // Só é uma notificação de handoff NOVA na primeira vez; se já estava
+  // aguardando humano, é a mesma pendência continuando.
+  const newHandoff = !wasAwaitingHuman && output.handoff;
+  // "novo" é pegajoso: uma vez aguardando humano, continua aguardando (mesmo
+  // que a IA consiga responder essa mensagem) até alguém assumir ou devolver.
+  const stillNeedsHuman = wasAwaitingHuman || output.handoff;
 
-  // 8. atualiza a conversa (handoff muda status p/ "novo")
+  // 8. atualiza a conversa
   await touchConversation(convo.id, {
-    status: output.handoff ? "novo" : "ia",
-    incUnread: output.handoff ? 1 : 0,
+    status: stillNeedsHuman ? "novo" : "ia",
+    incUnread: stillNeedsHuman ? 1 : 0,
   });
 
   // 7. lead
@@ -213,6 +240,25 @@ export async function processInbound(
       await sendText(msg.phoneNumberId, msg.from, output.reply);
     } catch (err) {
       console.error("[pipeline] envio via WhatsApp falhou:", err);
+    }
+  }
+
+  // Cliente já estava esperando humano e insistiu de novo sem a IA conseguir
+  // resolver: reforça com a mensagem de "alta demanda", mas só de vez em
+  // quando (não repete a cada "oi?/eai?" seguido).
+  if (wasAwaitingHuman && output.handoff) {
+    const waiting = client.waitingMessage?.trim();
+    const stale =
+      !lastOutBefore ||
+      Date.now() - lastOutBefore.getTime() > WAIT_REASSURE_MIN * 60_000;
+    if (waiting && stale) {
+      await insertMessage({ conversationId: convo.id, from: "bot", text: waiting });
+      await touchConversation(convo.id, { lastMessageAt: new Date() });
+      try {
+        await sendText(msg.phoneNumberId, msg.from, waiting);
+      } catch (err) {
+        console.error("[pipeline] envio da mensagem de espera falhou:", err);
+      }
     }
   }
 

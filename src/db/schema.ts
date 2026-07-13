@@ -189,6 +189,11 @@ export const messages = pgTable("messages", {
   from: messageFromEnum("from").notNull(),
   text: text("text").notNull(),
   isAudio: boolean("is_audio").default(false).notNull(),
+  // Anexo (imagem ou PDF) enviado manualmente pelo humano. Guardado como data
+  // URL (base64), igual avatar/logo — sem storage externo.
+  mediaUrl: text("media_url"),
+  mediaType: text("media_type"), // "image" | "document"
+  mediaFilename: text("media_filename"), // nome original, só documento
   courseMentioned: text("course_mentioned"),
   confidence: confidenceEnum("confidence"),
   // ID da mensagem na Meta: idempotência do webhook (§5).

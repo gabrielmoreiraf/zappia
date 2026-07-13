@@ -327,6 +327,42 @@ export async function getConversationsList(
   return convos.map((c) => ({ ...c, lastMessage: lastByConv.get(c.id) ?? null }));
 }
 
+export interface ConversationStatusCounts {
+  total: number;
+  ia: number;
+  novo: number;
+  voce: number;
+  foraDoHorario: number;
+}
+
+/** Contagem por status (§ filtro de Conversas), sempre do total real, não só da página de 50. */
+export async function getConversationStatusCounts(
+  clientId: string,
+): Promise<ConversationStatusCounts> {
+  const [rows, [outOfHours]] = await Promise.all([
+    db
+      .select({ status: conversations.status, c: count() })
+      .from(conversations)
+      .where(eq(conversations.clientId, clientId))
+      .groupBy(conversations.status),
+    db
+      .select({ c: count() })
+      .from(conversations)
+      .where(
+        and(
+          eq(conversations.clientId, clientId),
+          eq(conversations.outOfHoursNotified, true),
+        ),
+      ),
+  ]);
+
+  const byStatus = Object.fromEntries(rows.map((r) => [r.status, r.c]));
+  const ia = byStatus.ia ?? 0;
+  const novo = byStatus.novo ?? 0;
+  const voce = byStatus.voce ?? 0;
+  return { total: ia + novo + voce, ia, novo, voce, foraDoHorario: outOfHours?.c ?? 0 };
+}
+
 export async function getConversationThread(
   clientId: string,
   conversationId: string,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Trash2, Zap } from "lucide-react";
 import { toast } from "sonner";
@@ -16,6 +16,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { WhatsappFormatToolbar } from "@/components/whatsapp-format-toolbar";
+import { WhatsappText } from "@/components/whatsapp-text";
 import { createQuickReply, updateQuickReply, deleteQuickReply } from "./actions";
 
 export interface QuickReplyItem {
@@ -31,6 +33,7 @@ export function AtalhosClient({ items }: { items: QuickReplyItem[] }) {
   const [editing, setEditing] = useState<QuickReplyItem | null>(null);
   const [shortcut, setShortcut] = useState("");
   const [message, setMessage] = useState("");
+  const messageRef = useRef<HTMLTextAreaElement>(null);
 
   function openNew() {
     setEditing(null);
@@ -105,7 +108,7 @@ export function AtalhosClient({ items }: { items: QuickReplyItem[] }) {
                   /{item.shortcut}
                 </div>
                 <div className="text-xs text-slate-500 truncate">
-                  {item.message}
+                  <WhatsappText text={item.message} />
                 </div>
               </div>
               <Button
@@ -153,9 +156,17 @@ export function AtalhosClient({ items }: { items: QuickReplyItem[] }) {
               </p>
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="message">Mensagem</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="message">Mensagem</Label>
+                <WhatsappFormatToolbar
+                  value={message}
+                  onChange={setMessage}
+                  targetRef={messageRef}
+                />
+              </div>
               <Textarea
                 id="message"
+                ref={messageRef}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 rows={4}
