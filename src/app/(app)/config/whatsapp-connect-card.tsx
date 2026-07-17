@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCheck, Clock, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CheckCheck, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -128,6 +128,23 @@ export function WhatsAppConnectionCard({
             risco de banimento.
           </p>
 
+          {/* O aviso mais importante do fluxo: conectar tira o número do celular.
+              É o que mais gera arrependimento, então vem ANTES do formulário, com
+              destaque, e não como nota de rodapé. */}
+          <div className="flex items-start gap-2.5 mt-4 p-3 rounded-lg bg-amber-50 border border-amber-100">
+            <AlertTriangle size={15} className="text-amber-500 shrink-0 mt-0.5" />
+            <div className="text-xs text-amber-800">
+              <span className="font-semibold">
+                Use um número dedicado ao atendimento.
+              </span>{" "}
+              Ao conectar, esse número passa a responder pelo Zappia e{" "}
+              <span className="font-semibold">
+                deixa de funcionar no WhatsApp do celular
+              </span>
+              . Não use seu número pessoal.
+            </div>
+          </div>
+
           <form onSubmit={solicitar} className="mt-4 flex flex-col sm:flex-row gap-2 sm:items-end">
             <div className="grid gap-1.5 flex-1">
               <Label htmlFor="wa-number">Número do WhatsApp (com DDD)</Label>
@@ -144,11 +161,14 @@ export function WhatsAppConnectionCard({
             </Button>
           </form>
 
+          {/* Expectativa de prazo antes de clicar, não só depois (o card de
+              "aguardando" já dizia, mas aí era tarde). */}
           <div className="flex items-start gap-2 mt-3 text-xs text-slate-400">
-            <ShieldCheck size={13} className="text-emerald-500 shrink-0 mt-0.5" />
+            <Clock size={13} className="text-slate-400 shrink-0 mt-0.5" />
             <span>
-              Use um número dedicado ao atendimento. Ao conectar, ele passa a
-              responder pelo Zappia e não pelo WhatsApp do celular.
+              Depois de solicitar, nossa equipe conecta e te avisa por aqui em{" "}
+              <span className="font-medium text-slate-500">até 1 dia útil</span>.
+              Você não precisa fazer mais nada.
             </span>
           </div>
         </div>

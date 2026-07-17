@@ -87,6 +87,7 @@ export async function touchConversation(
     incUnread?: number;
     closedAt?: Date | null;
     outOfHoursNotified?: boolean;
+    reengagedAt?: Date | null;
   },
 ): Promise<void> {
   const set: Record<string, unknown> = {
@@ -98,9 +99,35 @@ export async function touchConversation(
     set.unreadCount = sql`${conversations.unreadCount} + ${opts.incUnread}`;
   }
   if ("outOfHoursNotified" in opts) set.outOfHoursNotified = opts.outOfHoursNotified;
+  if ("reengagedAt" in opts) set.reengagedAt = opts.reengagedAt;
   await db
     .update(conversations)
     .set(set)
+    .where(eq(conversations.id, conversationId));
+}
+
+/**
+ * Grava a origem de anúncio ("Clique para WhatsApp") na conversa. A Meta só
+ * manda isso na primeira mensagem — ver InboundMessage.referral no pipeline.
+ */
+export async function saveReferral(
+  conversationId: string,
+  referral: {
+    sourceType?: string;
+    sourceId?: string;
+    headline?: string;
+    ctwaClid?: string;
+  },
+): Promise<void> {
+  await db
+    .update(conversations)
+    .set({
+      referralSourceType: referral.sourceType ?? null,
+      referralSourceId: referral.sourceId ?? null,
+      referralHeadline: referral.headline ?? null,
+      referralCtwaClid: referral.ctwaClid ?? null,
+      referralAt: new Date(),
+    })
     .where(eq(conversations.id, conversationId));
 }
 
@@ -141,6 +168,12 @@ export interface InactivityCandidate {
   clientId: string;
   whatsappPhoneId: string | null;
   closingMessage: string;
+  // Reengajamento: a conversa já virou lead? já cutucamos? o cliente quer isso?
+  // Ver lib/inactivity.ts, que decide entre cutucar e encerrar.
+  isLead: boolean;
+  reengagedAt: Date | null;
+  reengageLeadsEnabled: boolean;
+  reengagementMessage: string;
 }
 
 /**
@@ -148,6 +181,10 @@ export interface InactivityCandidate {
  * habilitado (> 0), ainda abertas, NÃO aguardando humano ("novo" é poupado) e
  * sem mensagem há mais que o limite do cliente. Quem falou por último é checado
  * depois (só encerramos quando a bola estava com o cliente).
+ *
+ * Traz junto o que o reengajamento precisa: se o contato já virou lead (join em
+ * leads) e se já levou a cutucada. Um lead ainda não cutucado é reengajado em
+ * vez de encerrado.
  */
 export async function getInactivityCandidates(): Promise<InactivityCandidate[]> {
   return db
@@ -157,9 +194,15 @@ export async function getInactivityCandidates(): Promise<InactivityCandidate[]> 
       clientId: clients.id,
       whatsappPhoneId: clients.whatsappPhoneId,
       closingMessage: clients.closingMessage,
+      isLead: sql<boolean>`${leads.id} is not null`,
+      reengagedAt: conversations.reengagedAt,
+      reengageLeadsEnabled: clients.reengageLeadsEnabled,
+      reengagementMessage: clients.reengagementMessage,
     })
     .from(conversations)
     .innerJoin(clients, eq(clients.id, conversations.clientId))
+    // leftJoin: conversa sem lead continua candidata (só vai encerrar direto).
+    .leftJoin(leads, eq(leads.conversationId, conversations.id))
     .where(
       and(
         eq(clients.status, "active"),

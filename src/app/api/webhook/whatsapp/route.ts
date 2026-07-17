@@ -42,6 +42,19 @@ interface WhatsAppWebhookBody {
             caption?: string;
             filename?: string;
           };
+          /**
+           * Só vem quando o contato chegou por um anúncio "Clique para
+           * WhatsApp", e SÓ na primeira mensagem da conversa. É a Meta
+           * afirmando a origem — se não capturar aqui, o dado se perde.
+           */
+          referral?: {
+            source_type?: string; // "ad" | "post"
+            source_id?: string;
+            source_url?: string;
+            headline?: string;
+            body?: string;
+            ctwa_clid?: string;
+          };
         }>;
       };
     }>;
@@ -87,6 +100,14 @@ export async function POST(req: Request) {
           mediaMimeType: m.image?.mime_type ?? m.document?.mime_type,
           mediaCaption: m.image?.caption ?? m.document?.caption,
           mediaFilename: m.document?.filename,
+          referral: m.referral
+            ? {
+                sourceType: m.referral.source_type,
+                sourceId: m.referral.source_id,
+                headline: m.referral.headline,
+                ctwaClid: m.referral.ctwa_clid,
+              }
+            : undefined,
         };
         try {
           await processInbound(inbound);

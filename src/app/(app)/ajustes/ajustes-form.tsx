@@ -20,6 +20,8 @@ export function AjustesForm({
   waitingMessage,
   closingMessage,
   inactivityMinutes,
+  reengageLeadsEnabled,
+  reengagementMessage,
 }: {
   assistantName: string;
   welcomeMessage: string;
@@ -28,6 +30,8 @@ export function AjustesForm({
   waitingMessage: string;
   closingMessage: string;
   inactivityMinutes: number;
+  reengageLeadsEnabled: boolean;
+  reengagementMessage: string;
 }) {
   const [name, setName] = useState(assistantName);
   const [welcome, setWelcome] = useState(welcomeMessage);
@@ -37,6 +41,8 @@ export function AjustesForm({
   const [waiting, setWaiting] = useState(waitingMessage);
   const [closing, setClosing] = useState(closingMessage);
   const [mins, setMins] = useState(String(inactivityMinutes));
+  const [reengage, setReengage] = useState(reengageLeadsEnabled);
+  const [reengageMsg, setReengageMsg] = useState(reengagementMessage);
   const [pending, start] = useTransition();
 
   function addTag() {
@@ -198,6 +204,54 @@ export function AjustesForm({
                   onChange={(e) => setClosing(e.target.value)}
                 />
               </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 space-y-4">
+              <div>
+                <p className="text-sm font-medium text-slate-700">
+                  Recuperar lead que sumiu
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Quando alguém demonstra interesse e some, a IA dá uma última
+                  cutucada antes de encerrar, em vez de só se despedir.
+                </p>
+              </div>
+
+              <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  name="reengageLeadsEnabled"
+                  checked={reengage}
+                  onChange={(e) => setReengage(e.target.checked)}
+                  className="rounded border-slate-300 accent-emerald-600 mt-0.5"
+                />
+                <span className="text-sm text-slate-700">
+                  Cutucar leads antes de encerrar
+                  <span className="block text-xs text-muted-foreground">
+                    Só vale pra quem já virou lead, e é uma cutucada por
+                    atendimento.
+                  </span>
+                </span>
+              </label>
+
+              {reengage && (
+                <div className="grid gap-2">
+                  <Label htmlFor="reengagementMessage">
+                    Mensagem de reengajamento
+                  </Label>
+                  <Textarea
+                    id="reengagementMessage"
+                    name="reengagementMessage"
+                    rows={2}
+                    value={reengageMsg}
+                    onChange={(e) => setReengageMsg(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enviada depois do mesmo tempo de inatividade acima. Se ele
+                    responder, a IA volta a conversar normalmente.
+                  </p>
+                </div>
+              )}
             </div>
 
             <Button type="submit" disabled={pending}>

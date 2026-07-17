@@ -230,6 +230,10 @@ export async function saveAjustes(formData: FormData) {
   const rawMin = Number(formData.get("inactivityMinutes"));
   const inactivityMinutes =
     Number.isFinite(rawMin) && rawMin >= 0 ? Math.floor(rawMin) : 15;
+  const reengageLeadsEnabled = formData.get("reengageLeadsEnabled") === "on";
+  const reengagementMessage = String(
+    formData.get("reengagementMessage") ?? "",
+  ).trim();
 
   await db
     .update(clients)
@@ -241,6 +245,8 @@ export async function saveAjustes(formData: FormData) {
       ...(waitingMessage ? { waitingMessage } : {}),
       ...(closingMessage ? { closingMessage } : {}),
       inactivityMinutes,
+      reengageLeadsEnabled,
+      ...(reengagementMessage ? { reengagementMessage } : {}),
       aiConfigured: true,
     })
     .where(eq(clients.id, client.id));

@@ -411,25 +411,50 @@ export async function getConversationThread(
 
 /* ---------- leads (§4.5) ---------- */
 
+/**
+ * Lead + de qual anúncio ele veio. A origem mora na conversa (a Meta manda o
+ * referral na 1ª mensagem, ver pipeline), então juntamos aqui pra tela poder
+ * dizer "veio da campanha X", e não só "veio de anúncio".
+ */
+export type LeadWithSource = Lead & { referralHeadline: string | null };
+
+const leadWithSourceColumns = {
+  id: leads.id,
+  clientId: leads.clientId,
+  conversationId: leads.conversationId,
+  contactName: leads.contactName,
+  courseInterest: leads.courseInterest,
+  channel: leads.channel,
+  status: leads.status,
+  createdAt: leads.createdAt,
+  referralHeadline: conversations.referralHeadline,
+};
+
 export async function getLeads(
   clientId: string,
   status?: Lead["status"],
-): Promise<Lead[]> {
+): Promise<LeadWithSource[]> {
   const where = status
     ? and(eq(leads.clientId, clientId), eq(leads.status, status))
     : eq(leads.clientId, clientId);
-  return db.select().from(leads).where(where).orderBy(desc(leads.createdAt));
+  return db
+    .select(leadWithSourceColumns)
+    .from(leads)
+    .leftJoin(conversations, eq(conversations.id, leads.conversationId))
+    .where(where)
+    .orderBy(desc(leads.createdAt));
 }
 
 /** Só os leads escolhidos (exportação seletiva), sempre restrito ao cliente. */
 export async function getLeadsByIds(
   clientId: string,
   ids: string[],
-): Promise<Lead[]> {
+): Promise<LeadWithSource[]> {
   if (ids.length === 0) return [];
   return db
-    .select()
+    .select(leadWithSourceColumns)
     .from(leads)
+    .leftJoin(conversations, eq(conversations.id, leads.conversationId))
     .where(and(eq(leads.clientId, clientId), inArray(leads.id, ids)))
     .orderBy(desc(leads.createdAt));
 }

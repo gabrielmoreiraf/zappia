@@ -24,6 +24,8 @@ export default async function AjustesPage() {
         waitingMessage={client.waitingMessage}
         closingMessage={client.closingMessage}
         inactivityMinutes={client.inactivityMinutes}
+        reengageLeadsEnabled={client.reengageLeadsEnabled}
+        reengagementMessage={client.reengagementMessage}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Megaphone, Sprout } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -12,22 +12,50 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { dayLabel, initials } from "@/lib/format";
-import type { Lead } from "@/db/schema";
+import type { LeadWithSource } from "@/db/panel";
 import { LeadStatusSelect } from "./lead-status-select";
 
-const CHANNEL_LABEL: Record<string, string> = {
-  anuncio: "Anúncio",
-  organico: "Orgânico",
-};
-
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+
+/**
+ * Canal do lead. "Anúncio" só aparece quando a Meta afirmou a origem (referral
+ * na 1ª mensagem), então é fato, não chute. Quando dá, mostra QUAL campanha
+ * trouxe o contato — é o dado que diz onde vale gastar.
+ */
+function ChannelBadge({
+  channel,
+  headline,
+}: {
+  channel: string;
+  headline: string | null;
+}) {
+  if (channel === "anuncio") {
+    return (
+      <div className="min-w-0">
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-violet-700 bg-violet-50 px-1.5 py-0.5 rounded">
+          <Megaphone size={11} /> Anúncio
+        </span>
+        {headline && (
+          <div className="text-[11px] text-slate-400 truncate mt-0.5" title={headline}>
+            {headline}
+          </div>
+        )}
+      </div>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+      <Sprout size={11} /> Orgânico
+    </span>
+  );
+}
 
 export function LeadsList({
   rows,
   status,
   emptyMessage,
 }: {
-  rows: Lead[];
+  rows: LeadWithSource[];
   status?: string;
   emptyMessage: string;
 }) {
@@ -130,8 +158,11 @@ export function LeadsList({
                     {l.courseInterest ?? "-"}
                   </div>
                 </div>
-                <div className="text-xs text-slate-400 w-20 hidden sm:block">
-                  {CHANNEL_LABEL[l.channel]}
+                <div className="w-32 hidden sm:block">
+                  <ChannelBadge
+                    channel={l.channel}
+                    headline={l.referralHeadline}
+                  />
                 </div>
                 <LeadStatusSelect leadId={l.id} status={l.status} />
                 <div className="text-xs text-slate-400 w-14 text-right hidden sm:block">

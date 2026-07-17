@@ -14,6 +14,7 @@ import {
   insertMessage,
   logUsage,
   messageExistsByWaId,
+  saveReferral,
   touchConversation,
   upsertLead,
 } from "@/db/queries";
@@ -39,6 +40,16 @@ export interface InboundMessage {
   mediaMimeType?: string;
   mediaCaption?: string;
   mediaFilename?: string; // só documento
+  /**
+   * Origem do contato, quando a Meta informa que ele veio de um anúncio
+   * "Clique para WhatsApp". Só chega na PRIMEIRA mensagem da conversa.
+   */
+  referral?: {
+    sourceType?: string; // "ad" | "post"
+    sourceId?: string;
+    headline?: string;
+    ctwaClid?: string;
+  };
 }
 
 export interface PipelineResult {
@@ -104,6 +115,15 @@ export async function processInbound(
     msg.from,
     msg.contactName,
   );
+
+  // Anúncio: a Meta só manda o referral na primeira mensagem, então grava na
+  // hora. Não sobrescreve um referral já existente — se o contato voltar por
+  // outro anúncio depois, a origem que vale é a que trouxe ele a primeira vez.
+  if (msg.referral && !convo.referralSourceType) {
+    await saveReferral(convo.id, msg.referral);
+    convo.referralSourceType = msg.referral.sourceType ?? null;
+    convo.referralHeadline = msg.referral.headline ?? null;
+  }
 
   // grava a mensagem do cliente (waMessageId garante idempotência)
   await insertMessage({
@@ -200,6 +220,9 @@ export async function processInbound(
   });
 
   // 7. lead
+  // Canal: veio de anúncio se a Meta mandou referral nessa conversa (fato dela,
+  // não inferência nossa). Sem referral = orgânico.
+  const channel = convo.referralSourceType ? "anuncio" : "organico";
   let leadCreated = false;
   if (output.lead_detected) {
     const r = await upsertLead({
@@ -207,6 +230,7 @@ export async function processInbound(
       conversationId: convo.id,
       contactName,
       courseInterest: output.course_mentioned,
+      channel,
     });
     leadCreated = r.created;
   }
@@ -215,6 +239,7 @@ export async function processInbound(
   await notifyOwner(client, {
     newLead: leadCreated,
     newHandoff,
+    channel,
     contactName: contactName ?? "Contato",
     courseInterest: output.course_mentioned,
     handoffReason: output.handoff_reason,
@@ -271,6 +296,7 @@ async function notifyOwner(
   ev: {
     newLead: boolean;
     newHandoff: boolean;
+    channel: "anuncio" | "organico";
     contactName: string;
     courseInterest: string | null;
     handoffReason: string | null;
@@ -285,7 +311,7 @@ async function notifyOwner(
         clientName: client.name,
         contactName: ev.contactName,
         courseInterest: ev.courseInterest,
-        channel: "organico",
+        channel: ev.channel,
       });
     }
     if (ev.newHandoff && client.notifyHandoff) {

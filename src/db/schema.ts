@@ -87,6 +87,18 @@ export const clients = pgTable("clients", {
       "Como ficamos um tempinho sem falar, vou encerrar nosso atendimento por aqui. Se precisar de qualquer coisa, é só me chamar de novo!",
     )
     .notNull(),
+  // Reengajamento de lead: quando um contato que JÁ virou lead fica em
+  // silêncio, em vez de mandar a despedida de cara a IA dá uma cutucada e só
+  // encerra se ele continuar quieto (ver lib/inactivity.ts). Usa o mesmo timer
+  // de inatividade, então a cutucada sai ~15min depois do silêncio: bem dentro
+  // da janela de 24h da Meta, ou seja, texto livre e SEM custo (mensagem fora
+  // da janela exigiria template pago — ver pricing.ts).
+  reengageLeadsEnabled: boolean("reengage_leads_enabled").default(false).notNull(),
+  reengagementMessage: text("reengagement_message")
+    .default(
+      "Oi! Vi que você se interessou e acabamos parando por aqui. Ficou alguma dúvida? Posso te ajudar a seguir daqui. 😊",
+    )
+    .notNull(),
   // Horário de atendimento: quando ativado, a IA só responde dentro da janela
   // configurada. Fora dela, manda uma única mensagem avisando e a conversa vira
   // "novo" (aguardando humano) até o expediente voltar. Desligado = 24h (padrão).
@@ -187,6 +199,19 @@ export const conversations = pgTable(
     outOfHoursNotified: boolean("out_of_hours_notified")
       .default(false)
       .notNull(),
+    // Quando a IA já deu a cutucada de reengajamento nessa conversa. Garante
+    // no máximo UMA por conversa: na segunda vez que o lead fica quieto, a
+    // conversa encerra normalmente (ver lib/inactivity.ts).
+    reengagedAt: timestamp("reengaged_at", { withTimezone: true }),
+    // Origem do contato, quando veio de anúncio "Clique para WhatsApp": a Meta
+    // manda um objeto `referral` na PRIMEIRA mensagem da conversa (só nela).
+    // Preenchido = veio de anúncio; null = orgânico. Não é inferência nossa, é
+    // o que a Meta afirma — por isso não é configurável pelo cliente.
+    referralSourceType: text("referral_source_type"), // "ad" | "post"
+    referralSourceId: text("referral_source_id"), // qual anúncio
+    referralHeadline: text("referral_headline"), // título do anúncio, pro painel
+    referralCtwaClid: text("referral_ctwa_clid"), // id do clique (Conversions API)
+    referralAt: timestamp("referral_at", { withTimezone: true }),
   },
   (t) => [unique("conversations_client_contact_uq").on(t.clientId, t.contactPhone)],
 );
