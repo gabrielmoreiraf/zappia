@@ -45,7 +45,14 @@ export const env = {
     return required("CRON_SECRET");
   },
   get asaasApiKey() {
-    return required("ASAAS_API_KEY");
+    // A chave da Asaas começa com "$" ($aact_...), e colar ela num terminal ou
+    // num painel que interpreta shell deixa um "\" na frente. Nesse formato a
+    // Asaas devolve 401 em TODA chamada, o que parece erro do nosso código.
+    // Aspas e espaço na ponta também nunca fazem parte da chave.
+    return required("ASAAS_API_KEY")
+      .trim()
+      .replace(/^["']|["']$/g, "")
+      .replace(/^\\\$/, "$");
   },
   get asaasEnv() {
     return process.env.ASAAS_ENV === "production" ? "production" : "sandbox";

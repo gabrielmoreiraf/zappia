@@ -134,7 +134,7 @@ export function PlanCard({
             <AlertTriangle size={16} className="shrink-0 mt-0.5" />
             <span>
               Pagamento atrasado desde {dateLong(subscriptionDueDate)}. O atendimento
-              continua por enquanto, mas regularize pra não perder o acesso.
+              com IA está pausado até a cobrança ser confirmada.
             </span>
           </div>
         )}

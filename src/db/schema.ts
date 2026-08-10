@@ -400,6 +400,9 @@ export const paymentEvents = pgTable("payment_events", {
   clientId: uuid("client_id")
     .notNull()
     .references(() => clients.id, { onDelete: "cascade" }),
+  // Id do evento na Asaas (evt_...). Único: a Asaas re-entrega o mesmo evento
+  // quando desconfia que não chegou, e sem isso o histórico duplicaria.
+  asaasEventId: text("asaas_event_id").unique(),
   asaasPaymentId: text("asaas_payment_id"),
   event: text("event").notNull(),
   status: text("status").notNull(),

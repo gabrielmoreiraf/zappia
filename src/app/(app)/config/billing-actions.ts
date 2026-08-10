@@ -10,10 +10,15 @@ import { getCurrentClient } from "@/lib/current-client";
 import { capsFor } from "@/lib/permissions";
 import { PLAN_NAME, PLAN_PRICE } from "@/lib/plan";
 import {
+  AsaasError,
   createCustomer,
   createSubscription,
-  getLatestSubscriptionPayment,
+  getNextDueDate,
+  getOpenSubscriptionPayment,
   getPixQrCode,
+  isPaid,
+  listSubscriptionPayments,
+  parseAsaasDate,
   cancelPixAutomaticAuthorization,
   cancelSubscription as asaasCancelSubscription,
 } from "@/lib/asaas";
@@ -30,18 +35,44 @@ async function ctx(): Promise<{ user: User; client: Client } | null> {
   return capsFor(user).config ? { user, client } : null;
 }
 
-function tomorrowISODate(): string {
-  return tomorrow().toISOString().slice(0, 10);
-}
-
-function tomorrow(): Date {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d;
+/**
+ * Data no fuso de São Paulo (UTC-3 fixo: o Brasil não tem mais horário de
+ * verão desde 2019). O servidor roda em UTC, então `new Date()` puro viraria o
+ * dia às 21h daqui e a Asaas receberia um vencimento um dia à frente.
+ */
+function saoPauloISODate(offsetDays = 0): string {
+  const d = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  d.setUTCDate(d.getUTCDate() + offsetDays);
+  return d.toISOString().slice(0, 10);
 }
 
 function onlyDigits(s: string): string {
   return s.replace(/\D/g, "");
+}
+
+/**
+ * A Asaas já devolve o motivo em português e pronto pro usuário final
+ * ("Cartão de crédito recusado", "CPF inválido"). Quando não vier descrição
+ * (rede caiu, 500), usa a mensagem genérica.
+ */
+function asaasMessage(err: unknown, fallback: string): string {
+  return err instanceof AsaasError && err.description ? err.description : fallback;
+}
+
+/**
+ * Assinatura antiga que ficou pra trás (tentativa que não foi paga, ou troca
+ * de forma de pagamento) some da Asaas antes de criar a nova, senão o cliente
+ * fica com duas cobranças abertas do mesmo plano.
+ */
+async function dropStaleSubscription(client: Client): Promise<void> {
+  if (!client.asaasSubscriptionId) return;
+  if (client.subscriptionStatus === "active") return;
+  try {
+    await asaasCancelSubscription(client.asaasSubscriptionId);
+  } catch (err) {
+    // Já cancelada/inexistente: seguir em frente é o comportamento certo.
+    console.warn("[billing] não deu pra limpar a assinatura anterior:", err);
+  }
 }
 
 /** Cria (ou reaproveita) o cliente na Asaas pra esse tenant. */
@@ -70,6 +101,9 @@ async function ensureAsaasCustomer(
 export async function subscribeWithPix(cpfCnpjRaw: string): Promise<PixResult> {
   const c = await ctx();
   if (!c) return { ok: false, error: "Sem permissão." };
+  if (c.client.subscriptionStatus === "active") {
+    return { ok: false, error: "Sua assinatura já está ativa." };
+  }
 
   const cpfCnpj = onlyDigits(cpfCnpjRaw);
   if (cpfCnpj.length !== 11 && cpfCnpj.length !== 14) {
@@ -78,16 +112,20 @@ export async function subscribeWithPix(cpfCnpjRaw: string): Promise<PixResult> {
 
   try {
     const asaasCustomerId = await ensureAsaasCustomer(c.client, cpfCnpj);
+    await dropStaleSubscription(c.client);
 
+    // Vence amanhã: dá o dia de hoje inteiro pro cliente pagar sem a cobrança
+    // já nascer atrasada.
+    const nextDueDate = saoPauloISODate(1);
     const subscription = await createSubscription({
       customerId: asaasCustomerId,
       value: Number(PLAN_PRICE),
       description: `Assinatura ${PLAN_NAME}`,
-      nextDueDate: tomorrowISODate(),
+      nextDueDate,
       billingType: "PIX",
     });
 
-    const payment = await getLatestSubscriptionPayment(subscription.id);
+    const payment = await getOpenSubscriptionPayment(subscription.id);
     if (!payment) {
       return { ok: false, error: "Não foi possível gerar o Pix. Tente de novo." };
     }
@@ -101,7 +139,12 @@ export async function subscribeWithPix(cpfCnpjRaw: string): Promise<PixResult> {
         asaasSubscriptionId: subscription.id,
         subscriptionStatus: "pending",
         paymentMethod: "PIX",
+        monthlyFee: PLAN_PRICE,
+        subscriptionDueDate: parseAsaasDate(payment.dueDate),
         lastInvoiceUrl: payment.invoiceUrl,
+        // Ciclo novo: zera o contador de retentativa e o dedupe do lembrete.
+        pixRetryAttempt: 0,
+        lastReminderDueDate: null,
       })
       .where(eq(clients.id, c.client.id));
 
@@ -109,10 +152,10 @@ export async function subscribeWithPix(cpfCnpjRaw: string): Promise<PixResult> {
     return { ok: true, qrCodeImage: qr.encodedImage, copyPaste: qr.payload };
   } catch (err) {
     console.error("[subscribeWithPix] falhou:", err);
-    // TODO(debug temporário): expõe o erro real da Asaas pra diagnosticar a
-    // falha em produção; reverter pra mensagem genérica assim que resolver.
-    const detail = err instanceof Error ? err.message : String(err);
-    return { ok: false, error: `Não foi possível gerar o Pix. Detalhe: ${detail}` };
+    return {
+      ok: false,
+      error: asaasMessage(err, "Não foi possível gerar o Pix. Tente de novo."),
+    };
   }
 }
 
@@ -139,6 +182,9 @@ export async function subscribeWithCard(
 ): Promise<Result> {
   const c = await ctx();
   if (!c) return { ok: false, error: "Sem permissão." };
+  if (c.client.subscriptionStatus === "active") {
+    return { ok: false, error: "Sua assinatura já está ativa." };
+  }
 
   const cpfCnpj = onlyDigits(input.cpfCnpj);
   if (cpfCnpj.length !== 11 && cpfCnpj.length !== 14) {
@@ -159,17 +205,22 @@ export async function subscribeWithCard(
 
   try {
     const asaasCustomerId = await ensureAsaasCustomer(c.client, cpfCnpj);
+    await dropStaleSubscription(c.client);
+
     const h = await headers();
     const remoteIp =
       h.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       h.get("x-real-ip") ||
       "127.0.0.1";
 
+    // Vence HOJE de propósito: a Asaas só captura o cartão na data de
+    // vencimento, então com data futura a cobrança nasceria PENDING e a tela
+    // ficaria girando em "confirmando o pagamento" até o dia seguinte.
     const subscription = await createSubscription({
       customerId: asaasCustomerId,
       value: Number(PLAN_PRICE),
       description: `Assinatura ${PLAN_NAME}`,
-      nextDueDate: tomorrowISODate(),
+      nextDueDate: saoPauloISODate(),
       billingType: "CREDIT_CARD",
       creditCard: {
         holderName: input.holderName,
@@ -189,6 +240,10 @@ export async function subscribeWithCard(
       remoteIp,
     });
 
+    // Guarda o link da fatura: se a captura do cartão falhar depois, o cliente
+    // ainda tem por onde pagar ("Pagar agora" no card do plano).
+    const payment = await getOpenSubscriptionPayment(subscription.id).catch(() => null);
+
     await db
       .update(clients)
       .set({
@@ -197,6 +252,11 @@ export async function subscribeWithCard(
         asaasSubscriptionId: subscription.id,
         subscriptionStatus: "pending",
         paymentMethod: "CREDIT_CARD",
+        monthlyFee: PLAN_PRICE,
+        subscriptionDueDate: payment ? parseAsaasDate(payment.dueDate) : null,
+        lastInvoiceUrl: payment?.invoiceUrl ?? null,
+        pixRetryAttempt: 0,
+        lastReminderDueDate: null,
       })
       .where(eq(clients.id, c.client.id));
 
@@ -204,22 +264,53 @@ export async function subscribeWithCard(
     return { ok: true };
   } catch (err) {
     console.error("[subscribeWithCard] falhou:", err);
-    // TODO(debug temporário): expõe o erro real da Asaas; reverter assim que resolver.
-    const detail = err instanceof Error ? err.message : String(err);
     return {
       ok: false,
-      error: `Não foi possível processar o cartão. Detalhe: ${detail}`,
+      error: asaasMessage(err, "Não foi possível processar o cartão. Confira os dados e tente de novo."),
     };
   }
 }
 
-/** Estado mais recente da assinatura, pra polling depois de gerar o Pix. */
+/**
+ * Estado mais recente da assinatura, pra polling depois de gerar o Pix ou
+ * enviar o cartão. Enquanto está "pending", confere direto na Asaas em vez de
+ * só esperar o webhook: se a entrega do webhook atrasar (ou falhar), o cliente
+ * ainda vê a confirmação na hora, e o banco fica em dia do mesmo jeito.
+ */
 export async function getSubscriptionStatus(): Promise<{
   status: string;
 } | null> {
   const c = await ctx();
   if (!c) return null;
-  return { status: c.client.subscriptionStatus };
+  if (c.client.subscriptionStatus !== "pending" || !c.client.asaasSubscriptionId) {
+    return { status: c.client.subscriptionStatus };
+  }
+
+  try {
+    const payments = await listSubscriptionPayments(c.client.asaasSubscriptionId);
+    const paid = payments.find((p) => isPaid(p.status));
+    if (!paid) return { status: c.client.subscriptionStatus };
+
+    const nextDueDate = await getNextDueDate(c.client.asaasSubscriptionId, paid.dueDate);
+    await db
+      .update(clients)
+      .set({
+        subscriptionStatus: "active",
+        status: "active",
+        subscriptionStartedAt: c.client.subscriptionStartedAt ?? new Date(),
+        lastPaymentAt: new Date(),
+        subscriptionDueDate: nextDueDate,
+        paymentMethod: paid.billingType,
+        lastInvoiceUrl: paid.invoiceUrl,
+        pixRetryAttempt: 0,
+      })
+      .where(eq(clients.id, c.client.id));
+    revalidatePath("/config");
+    return { status: "active" };
+  } catch (err) {
+    console.error("[getSubscriptionStatus] conferência na Asaas falhou:", err);
+    return { status: c.client.subscriptionStatus };
+  }
 }
 
 /** Cancela a assinatura ativa (cartão ou Pix Automático). Pausa a IA junto. */

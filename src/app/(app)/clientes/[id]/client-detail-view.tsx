@@ -13,6 +13,7 @@ import {
   LogIn,
   QrCode,
   Receipt,
+  RefreshCw,
   ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -30,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { dateLong, dateTimeShort, money } from "@/lib/format";
+import { PLAN_PRICE, PLAN_PRICE_LABEL } from "@/lib/plan";
 import type { ClientDetail } from "@/db/agency";
 import { enterClient } from "../../agency-actions";
 import {
@@ -37,6 +39,7 @@ import {
   toggleLifetimeAccess,
   grantFreeMonths,
   generateOneOffCharge,
+  syncSubscriptionPrice,
 } from "./actions";
 
 const PAYMENT_LABEL: Record<string, string> = {
@@ -67,6 +70,13 @@ export function ClientDetailView({ detail }: { detail: ClientDetail }) {
   const [chargeDesc, setChargeDesc] = useState("");
 
   const subInfo = SUB_STATUS_LABEL[client.subscriptionStatus] ?? SUB_STATUS_LABEL.none;
+  // Assinatura criada antes de uma mudança de preço: continua no valor antigo
+  // na Asaas até alguém reajustar de propósito.
+  const precoDesatualizado =
+    !client.lifetimeAccess &&
+    !!client.asaasSubscriptionId &&
+    client.monthlyFee != null &&
+    Number(client.monthlyFee) !== Number(PLAN_PRICE);
 
   function submitEnter(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -105,12 +115,30 @@ export function ClientDetailView({ detail }: { detail: ClientDetail }) {
     });
   }
 
+  function syncPrice() {
+    if (
+      !confirm(
+        `Colocar a assinatura desse cliente em ${PLAN_PRICE_LABEL}/mês? A cobrança do ciclo atual não muda; o valor novo vale a partir da próxima.`,
+      )
+    )
+      return;
+    start(async () => {
+      const res = await syncSubscriptionPrice(client.id);
+      if (res.ok) {
+        toast.success(`Assinatura atualizada para ${PLAN_PRICE_LABEL}/mês.`);
+        router.refresh();
+      } else {
+        toast.error(res.error ?? "Falha ao atualizar o valor.");
+      }
+    });
+  }
+
   function toggleLifetime() {
     const turningOn = !client.lifetimeAccess;
     if (
       !confirm(
         turningOn
-          ? "Dar acesso vitalício? Esse cliente para de precisar de assinatura."
+          ? "Dar acesso vitalício? A cobrança recorrente na Asaas é cancelada e esse cliente para de precisar de assinatura."
           : "Remover o acesso vitalício? O cliente volta a precisar assinar um plano.",
       )
     )
@@ -258,8 +286,23 @@ export function ClientDetailView({ detail }: { detail: ClientDetail }) {
                   {client.freeMonthsRemaining} restando de {client.freeMonthsGranted} dados
                 </Row>
               )}
+              {precoDesatualizado && (
+                <div className="flex items-start gap-2.5 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2.5">
+                  <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                  <span>
+                    Assinatura em {money(client.monthlyFee)}/mês, e o plano hoje é{" "}
+                    {PLAN_PRICE_LABEL}. Atualize pra cobrar o valor novo a partir do
+                    próximo ciclo.
+                  </span>
+                </div>
+              )}
 
               <div className="flex flex-wrap gap-2 pt-2">
+                {precoDesatualizado && (
+                  <Button variant="outline" size="sm" onClick={syncPrice} disabled={pending}>
+                    <RefreshCw size={14} /> Atualizar para {PLAN_PRICE_LABEL}
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" onClick={() => setFreeOpen(true)}>
                   <Gift size={14} /> Liberar meses grátis
                 </Button>

@@ -6,17 +6,82 @@ function baseUrl(): string {
     : "https://sandbox.asaas.com/api/v3";
 }
 
+/**
+ * Erro vindo da Asaas já traduzido. `description` é a mensagem que a própria
+ * Asaas escreve em português (ex.: "Cartão de crédito recusado"), pronta pra
+ * mostrar pro cliente; `code` e `status` ficam pro log.
+ */
+export class AsaasError extends Error {
+  readonly code: string | null;
+  readonly status: number;
+  readonly description: string | null;
+
+  constructor(opts: {
+    path: string;
+    status: number;
+    code: string | null;
+    description: string | null;
+    raw: string;
+  }) {
+    super(`asaas ${opts.path} ${opts.status}: ${opts.description ?? opts.raw}`);
+    this.name = "AsaasError";
+    this.code = opts.code;
+    this.status = opts.status;
+    this.description = opts.description;
+  }
+}
+
+interface AsaasErrorBody {
+  errors?: { code?: string; description?: string }[];
+}
+
+// A Asaas cobra em segundos reais: se a rede travar, é melhor devolver erro
+// tratado pro cliente do que deixar a request pendurada até o timeout da
+// Vercel (que devolveria uma tela de erro genérica).
+const TIMEOUT_MS = 20_000;
+
 async function asaasFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(`${baseUrl()}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      access_token: env.asaasApiKey,
-      ...init?.headers,
-    },
-  });
-  if (!r.ok) throw new Error(`asaas ${path} ${r.status}: ${await r.text()}`);
-  return (await r.json()) as T;
+  let r: Response;
+  try {
+    r = await fetch(`${baseUrl()}${path}`, {
+      ...init,
+      // Nunca reaproveitar resposta em cache: são dados de cobrança ao vivo.
+      cache: "no-store",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      headers: {
+        "Content-Type": "application/json",
+        access_token: env.asaasApiKey,
+        ...init?.headers,
+      },
+    });
+  } catch (err) {
+    throw new AsaasError({
+      path,
+      status: 0,
+      code: null,
+      description: null,
+      raw: err instanceof Error ? err.message : String(err),
+    });
+  }
+
+  const raw = await r.text();
+  if (!r.ok) {
+    let code: string | null = null;
+    let description: string | null = null;
+    try {
+      const body = JSON.parse(raw) as AsaasErrorBody;
+      const first = body.errors?.[0];
+      code = first?.code ?? null;
+      description = first?.description ?? null;
+    } catch {
+      // corpo não-JSON (ex.: HTML de erro do gateway): fica só o raw no log
+    }
+    throw new AsaasError({ path, status: r.status, code, description, raw });
+  }
+
+  // DELETE pode voltar corpo vazio.
+  if (!raw) return undefined as T;
+  return JSON.parse(raw) as T;
 }
 
 export interface AsaasCustomer {
@@ -112,6 +177,30 @@ export async function createSubscription(
   });
 }
 
+/** Estado atual da assinatura. `nextDueDate` já vem avançado após cada pagamento. */
+export async function getSubscription(
+  subscriptionId: string,
+): Promise<AsaasSubscription> {
+  return asaasFetch<AsaasSubscription>(`/subscriptions/${subscriptionId}`);
+}
+
+/**
+ * Reajusta o valor de uma assinatura que já existe (ex.: mudança de preço do
+ * plano). `updatePendingPayments: false` de propósito: a cobrança já emitida
+ * do ciclo atual continua no valor antigo, e o valor novo vale a partir do
+ * próximo ciclo — ninguém recebe uma fatura reajustada em cima da hora.
+ */
+export async function updateSubscriptionValue(
+  subscriptionId: string,
+  value: number,
+  description: string,
+): Promise<AsaasSubscription> {
+  return asaasFetch<AsaasSubscription>(`/subscriptions/${subscriptionId}`, {
+    method: "PUT",
+    body: JSON.stringify({ value, description, updatePendingPayments: false }),
+  });
+}
+
 export interface AsaasPayment {
   id: string;
   status: string;
@@ -120,14 +209,68 @@ export interface AsaasPayment {
   billingType: string;
 }
 
-/** Pega o pagamento mais recente da assinatura. */
-export async function getLatestSubscriptionPayment(
+/**
+ * Cobrança que o cliente tem pra pagar agora nessa assinatura: a primeira em
+ * aberto (PENDING/OVERDUE). Só cai no pagamento mais recente se não houver
+ * nenhuma em aberto. Não dá pra confiar em `order=desc` da listagem, por isso
+ * a escolha é feita aqui.
+ */
+export async function getOpenSubscriptionPayment(
   subscriptionId: string,
 ): Promise<AsaasPayment | null> {
+  const list = await listSubscriptionPayments(subscriptionId);
+  const open = list.filter((p) => p.status === "PENDING" || p.status === "OVERDUE");
+  const byDueDateAsc = [...open].sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  return byDueDateAsc[0] ?? list[0] ?? null;
+}
+
+export async function listSubscriptionPayments(
+  subscriptionId: string,
+): Promise<AsaasPayment[]> {
   const res = await asaasFetch<{ data: AsaasPayment[] }>(
-    `/subscriptions/${subscriptionId}/payments?limit=1&order=desc`,
+    `/subscriptions/${subscriptionId}/payments?limit=10`,
   );
-  return res.data[0] ?? null;
+  return res.data ?? [];
+}
+
+// Status em que a Asaas considera o dinheiro garantido (CONFIRMED = capturado
+// no cartão, RECEIVED = caiu na conta).
+const PAID_STATUSES = new Set(["CONFIRMED", "RECEIVED", "RECEIVED_IN_CASH"]);
+
+export function isPaid(status: string): boolean {
+  return PAID_STATUSES.has(status);
+}
+
+/**
+ * A Asaas manda data sem hora ("YYYY-MM-DD"). Se virasse `new Date("...")`
+ * seria meia-noite UTC, que exibida em America/Sao_Paulo (UTC-3) recua pro dia
+ * anterior. Ancora ao meio-dia UTC pra nenhum fuso cruzar a virada do dia.
+ */
+export function parseAsaasDate(d: string): Date {
+  return new Date(`${d}T12:00:00Z`);
+}
+
+/**
+ * Vencimento do PRÓXIMO ciclo (o que as telas chamam de "próxima cobrança").
+ * A Asaas já avança `nextDueDate` da assinatura assim que confirma um
+ * pagamento; se a consulta falhar, cai no vencimento pago + 1 mês. Sem isso a
+ * tela mostraria como "próxima" a cobrança que o cliente acabou de pagar.
+ */
+export async function getNextDueDate(
+  subscriptionId: string,
+  paidDueDate: string,
+): Promise<Date> {
+  try {
+    const sub = await getSubscription(subscriptionId);
+    if (sub.nextDueDate && sub.nextDueDate > paidDueDate) {
+      return parseAsaasDate(sub.nextDueDate);
+    }
+  } catch (err) {
+    console.warn("[asaas] não deu pra ler o próximo vencimento:", err);
+  }
+  const d = parseAsaasDate(paidDueDate);
+  d.setUTCMonth(d.getUTCMonth() + 1);
+  return d;
 }
 
 export interface PixQrCode {

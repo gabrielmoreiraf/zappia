@@ -5,7 +5,15 @@ import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { clients } from "@/db/schema";
 import { getCurrentUser } from "@/lib/current-user";
-import { createCustomer, createOneOffCharge } from "@/lib/asaas";
+import { PLAN_NAME, PLAN_PRICE } from "@/lib/plan";
+import {
+  AsaasError,
+  cancelPixAutomaticAuthorization,
+  cancelSubscription,
+  createCustomer,
+  createOneOffCharge,
+  updateSubscriptionValue,
+} from "@/lib/asaas";
 
 type Result = { ok: boolean; error?: string; invoiceUrl?: string };
 
@@ -77,15 +85,21 @@ export async function grantFreeMonths(
 }
 
 /**
- * Liga/desliga acesso vitalício (sem plano, sem cobrança). Ligando: reativa o
- * cliente, marca assinatura em dia e some com data de próxima cobrança.
- * Desligando: volta a exigir assinatura normal (subscription_status "none").
+ * Liga/desliga acesso vitalício (sem plano, sem cobrança). Ligando: cancela a
+ * cobrança recorrente na Asaas (senão o cliente continuaria sendo debitado todo
+ * mês mesmo com a tela dizendo "sem mensalidade"), reativa o cliente e some com
+ * a data de próxima cobrança. Desligando: volta a exigir assinatura normal
+ * (subscription_status "none"), e o cliente assina de novo pelo painel.
  */
 export async function toggleLifetimeAccess(clientId: string): Promise<Result> {
   if (!(await requireAdmin())) return { ok: false, error: "Sem permissão." };
 
   const [client] = await db
-    .select({ lifetimeAccess: clients.lifetimeAccess })
+    .select({
+      lifetimeAccess: clients.lifetimeAccess,
+      asaasSubscriptionId: clients.asaasSubscriptionId,
+      pixAutomaticAuthorizationId: clients.pixAutomaticAuthorizationId,
+    })
     .from(clients)
     .where(eq(clients.id, clientId))
     .limit(1);
@@ -97,6 +111,22 @@ export async function toggleLifetimeAccess(clientId: string): Promise<Result> {
       .set({ lifetimeAccess: false, subscriptionStatus: "none" })
       .where(eq(clients.id, clientId));
   } else {
+    try {
+      if (client.pixAutomaticAuthorizationId) {
+        await cancelPixAutomaticAuthorization(client.pixAutomaticAuthorizationId);
+      }
+      if (client.asaasSubscriptionId) {
+        await cancelSubscription(client.asaasSubscriptionId);
+      }
+    } catch (err) {
+      console.error("[toggleLifetimeAccess] não deu pra cancelar na Asaas:", err);
+      return {
+        ok: false,
+        error:
+          "Não foi possível cancelar a cobrança na Asaas. Sem isso o cliente continuaria sendo cobrado, então nada foi alterado.",
+      };
+    }
+
     await db
       .update(clients)
       .set({
@@ -105,6 +135,10 @@ export async function toggleLifetimeAccess(clientId: string): Promise<Result> {
         subscriptionStatus: "active",
         subscriptionDueDate: null,
         monthlyFee: null,
+        asaasSubscriptionId: null,
+        pixAutomaticAuthorizationId: null,
+        pixAutomaticStatus: null,
+        pixNextChargeDue: null,
         subscriptionStartedAt: sql`coalesce(${clients.subscriptionStartedAt}, now())`,
       })
       .where(eq(clients.id, clientId));
@@ -112,6 +146,55 @@ export async function toggleLifetimeAccess(clientId: string): Promise<Result> {
 
   revalidatePath(`/clientes/${clientId}`);
   return { ok: true };
+}
+
+/**
+ * Coloca a assinatura desse cliente no preço atual do plano. Usado quando o
+ * preço do Zappia muda: quem já assinava continua no valor antigo até alguém
+ * decidir reajustar. O ciclo já emitido não muda (ver updateSubscriptionValue),
+ * o valor novo vale a partir da próxima cobrança.
+ */
+export async function syncSubscriptionPrice(clientId: string): Promise<Result> {
+  if (!(await requireAdmin())) return { ok: false, error: "Sem permissão." };
+
+  const [client] = await db
+    .select({
+      asaasSubscriptionId: clients.asaasSubscriptionId,
+      lifetimeAccess: clients.lifetimeAccess,
+    })
+    .from(clients)
+    .where(eq(clients.id, clientId))
+    .limit(1);
+  if (!client) return { ok: false, error: "Cliente não encontrado." };
+  if (client.lifetimeAccess) {
+    return { ok: false, error: "Esse cliente tem acesso vitalício, não é cobrado." };
+  }
+  if (!client.asaasSubscriptionId) {
+    return { ok: false, error: "Esse cliente não tem assinatura ativa na Asaas." };
+  }
+
+  try {
+    await updateSubscriptionValue(
+      client.asaasSubscriptionId,
+      Number(PLAN_PRICE),
+      `Assinatura ${PLAN_NAME}`,
+    );
+    await db
+      .update(clients)
+      .set({ monthlyFee: PLAN_PRICE })
+      .where(eq(clients.id, clientId));
+    revalidatePath(`/clientes/${clientId}`);
+    return { ok: true };
+  } catch (err) {
+    console.error("[syncSubscriptionPrice] falhou:", err);
+    return {
+      ok: false,
+      error:
+        err instanceof AsaasError && err.description
+          ? err.description
+          : "Não foi possível atualizar o valor na Asaas.",
+    };
+  }
 }
 
 /** Gera uma cobrança avulsa (fora do ciclo mensal) pra esse cliente na Asaas. */

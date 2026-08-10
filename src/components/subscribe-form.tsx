@@ -32,6 +32,7 @@ export function SubscribeForm({
   const [pending, start] = useTransition();
   const [pixData, setPixData] = useState<PixData | null>(null);
   const [waitingConfirm, setWaitingConfirm] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
 
   // Cartão
   const [cardNumber, setCardNumber] = useState("");
@@ -85,14 +86,34 @@ export function SubscribeForm({
     });
   }
 
-  usePollSubscriptionActive(waitingConfirm, () => {
-    toast.success("Pagamento confirmado! Sua IA já está ativa.");
-    setWaitingConfirm(false);
-    onActivated();
+  // Pix pode demorar (o cliente ainda vai abrir o app do banco); cartão é
+  // capturado na hora, então esperar muito ali só significa que algo falhou.
+  usePollSubscriptionActive(waitingConfirm, pixData ? 15 * 60_000 : 90_000, {
+    onActive: () => {
+      toast.success("Pagamento confirmado! Sua IA já está ativa.");
+      setWaitingConfirm(false);
+      onActivated();
+    },
+    onTimeout: () => {
+      setWaitingConfirm(false);
+      setTimedOut(true);
+    },
   });
 
+  function checkAgain() {
+    setTimedOut(false);
+    setWaitingConfirm(true);
+  }
+
   if (pixData) {
-    return <PixPanel data={pixData} waiting={waitingConfirm} />;
+    return (
+      <PixPanel
+        data={pixData}
+        waiting={waitingConfirm}
+        timedOut={timedOut}
+        onCheckAgain={checkAgain}
+      />
+    );
   }
 
   if (waitingConfirm) {
@@ -102,6 +123,20 @@ export function SubscribeForm({
         <p className="text-sm text-slate-600">
           Processando o pagamento… isso costuma levar só alguns segundos.
         </p>
+      </div>
+    );
+  }
+
+  if (timedOut) {
+    return (
+      <div className="py-8 flex flex-col items-center gap-3 text-center">
+        <p className="text-sm text-slate-600 max-w-xs">
+          Ainda não recebemos a confirmação do pagamento. Se o valor já foi
+          debitado, a liberação entra em instantes.
+        </p>
+        <Button variant="outline" onClick={checkAgain}>
+          Verificar de novo
+        </Button>
       </div>
     );
   }
@@ -355,7 +390,17 @@ function CardPreview({
   );
 }
 
-function PixPanel({ data, waiting }: { data: PixData; waiting: boolean }) {
+function PixPanel({
+  data,
+  waiting,
+  timedOut,
+  onCheckAgain,
+}: {
+  data: PixData;
+  waiting: boolean;
+  timedOut: boolean;
+  onCheckAgain: () => void;
+}) {
   const [copied, setCopied] = useState(false);
 
   function copy() {
@@ -389,24 +434,47 @@ function PixPanel({ data, waiting }: { data: PixData; waiting: boolean }) {
           Aguardando confirmação do pagamento…
         </div>
       )}
+      {timedOut && (
+        <Button variant="outline" size="sm" onClick={onCheckAgain} className="mt-1">
+          Já paguei, verificar
+        </Button>
+      )}
     </div>
   );
 }
 
-/** Consulta o status a cada 3s enquanto `active` for true; chama onActive() quando confirmar. */
-function usePollSubscriptionActive(active: boolean, onActive: () => void) {
-  const onActiveRef = useRef(onActive);
-  onActiveRef.current = onActive;
+/**
+ * Consulta o status a cada 3s enquanto `active` for true. Chama onActive()
+ * quando confirmar e onTimeout() se estourar `timeoutMs` — sem esse limite a
+ * tela ficaria girando pra sempre caso o pagamento nunca fosse concluído.
+ */
+function usePollSubscriptionActive(
+  active: boolean,
+  timeoutMs: number,
+  handlers: { onActive: () => void; onTimeout: () => void },
+) {
+  // Ref (e não dependência do efeito) pra trocar de handler sem reiniciar o
+  // relógio do timeout no meio da espera.
+  const handlersRef = useRef(handlers);
+  useEffect(() => {
+    handlersRef.current = handlers;
+  });
 
   useEffect(() => {
     if (!active) return;
+    const startedAt = Date.now();
     const id = setInterval(async () => {
+      if (Date.now() - startedAt > timeoutMs) {
+        clearInterval(id);
+        handlersRef.current.onTimeout();
+        return;
+      }
       const res = await getSubscriptionStatus();
       if (res?.status === "active") {
         clearInterval(id);
-        onActiveRef.current();
+        handlersRef.current.onActive();
       }
     }, 3000);
     return () => clearInterval(id);
-  }, [active]);
+  }, [active, timeoutMs]);
 }
